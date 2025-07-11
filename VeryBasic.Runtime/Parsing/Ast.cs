@@ -7,6 +7,10 @@ public class Ast
     private List<INode> _nodes;
     public List<INode> Nodes => _nodes;
 
+    private int _index;
+    
+    private List<IToken> _tokens;
+
     public Ast(string code)
     {
         _code = code;
@@ -15,7 +19,23 @@ public class Ast
     public void Parse()
     {
         List<IToken> tokens = new Tokenizer(_code).Tokenize();
-        Console.WriteLine(string.Join(" ", tokens));
+        _tokens = tokens;
+            
+    }
+
+    private IToken Advance()
+    {
+        return _tokens[_index++];
+    }
+
+    private bool IsAtEnd()
+    {
+        return _index >= _code.Length;
+    }
+
+    private IToken Peek()
+    {
+        return _tokens[_index];
     }
 }
 
