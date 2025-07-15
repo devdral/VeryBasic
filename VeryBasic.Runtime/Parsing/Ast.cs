@@ -16,16 +16,41 @@ public class Ast
         _code = code;
     }
 
-    public void Parse()
+    public List<INode> Parse()
     {
         List<IToken> tokens = new Tokenizer(_code).Tokenize();
         _tokens = tokens;
-            
+        _nodes = new List<INode>() {Expression()};
+        return _nodes;
     }
 
     private IToken Advance()
     {
         return _tokens[_index++];
+    }
+
+    private bool Match(params SyntaxTokenType[] matches)
+    {
+        if (IsAtEnd()) return false;
+        else {
+            foreach (SyntaxTokenType match in matches) {
+                if (Peek() is SyntaxToken token)
+                {
+                    if (token.Type == match)
+                    {
+                        Advance();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private IToken Previous()
+    {
+        return _tokens[_index - 1];
     }
 
     private bool IsAtEnd()
@@ -36,6 +61,13 @@ public class Ast
     private IToken Peek()
     {
         return _tokens[_index];
+    }
+    
+    // Node parsers
+
+    private INode Expression()
+    {
+        return null;
     }
 }
 
