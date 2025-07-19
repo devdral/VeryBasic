@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection.Metadata;
 using static VeryBasic.Runtime.Parsing.SyntaxTokenType;
 
 namespace VeryBasic.Runtime.Parsing;
