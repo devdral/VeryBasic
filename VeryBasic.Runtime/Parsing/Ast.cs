@@ -204,22 +204,26 @@ public class Ast
 
     private IExpressionNode Unary()
     {
-        IExpressionNode expr = Primary();
+        IExpressionNode expr;
         if (Match(Minus, Not))
         {
             SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Primary();
-            BinOp op = BinOp.Mul;
+            IExpressionNode operand = Unary();
+            UnaryOp op = UnaryOp.Negate;
             switch (opToken.Type)
             {
-                case Multiply:
-                    op = BinOp.Mul;
+                case Minus:
+                    op = UnaryOp.Negate;
                     break;
-                case Divide:
-                    op = BinOp.Div;
+                case Not:
+                    op = UnaryOp.Invert;
                     break;
             }
-            expr = new BinaryOpNode(expr, op, right);
+            expr = new UnaryOpNode(op, operand);
+        }
+        else
+        {
+            expr = Primary();
         }
 
         return expr;
