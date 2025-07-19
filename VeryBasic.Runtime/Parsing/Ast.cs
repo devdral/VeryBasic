@@ -11,7 +11,7 @@ public class Ast
 
     private int _index;
     
-    private List<IToken> _tokens;
+    private List<IToken> _tokens = [];
 
     public Ast(string code)
     {
@@ -22,8 +22,7 @@ public class Ast
     {
         List<IToken> tokens = new Tokenizer(_code).Tokenize();
         _tokens = tokens;
-        _nodes = new List<INode>() {Expression()};
-        return _nodes;
+        return [Expression()];
     }
 
     private IToken Advance()
