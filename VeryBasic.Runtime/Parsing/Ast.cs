@@ -1,3 +1,5 @@
+using static VeryBasic.Runtime.Parsing.SyntaxTokenType;
+
 namespace VeryBasic.Runtime.Parsing;
 
 public class Ast
@@ -81,7 +83,188 @@ public class Ast
 
     private INode Expression()
     {
-        return null;
+        return Logical();
+    }
+
+    private IExpressionNode Logical()
+    {
+        IExpressionNode expr = Equality();
+        while (Match(And, Or))
+        {
+            SyntaxToken opToken = (SyntaxToken) Previous();
+            IExpressionNode right = Equality();
+            BinOp op = BinOp.And;
+            switch (opToken.Type)
+            {
+                case And:
+                    op = BinOp.And;
+                    break;
+                case Or:
+                    op = BinOp.Or;
+                    break;
+            }
+            expr = new BinaryOpNode(expr, op, right);
+        }
+        return expr;
+    }
+
+    private IExpressionNode Equality()
+    {
+        IExpressionNode expr = Comparison();
+        while (Match(Equal, NotEqual))
+        {
+            SyntaxToken opToken = (SyntaxToken) Previous();
+            IExpressionNode right = Comparison();
+            BinOp op = BinOp.Equal;
+            switch (opToken.Type)
+            {
+                case Equal:
+                    op = BinOp.Equal;
+                    break;
+                case NotEqual:
+                    op = BinOp.NotEqual;
+                    break;
+            }
+            expr = new BinaryOpNode(expr, op, right);
+        }
+        return expr;
+    }
+
+    private IExpressionNode Comparison()
+    {
+        IExpressionNode expr = Term();
+        while (Match(LessThan, GreaterThan, GEq, LEq))
+        {
+            SyntaxToken opToken = (SyntaxToken) Previous();
+            IExpressionNode right = Term();
+            BinOp op = BinOp.LessThan;
+            switch (opToken.Type)
+            {
+                case LessThan:
+                    op = BinOp.LessThan;
+                    break;
+                case LEq:
+                    op = BinOp.LEq;
+                    break;
+                case GreaterThan:
+                    op = BinOp.GreaterThan;
+                    break;
+                case GEq:
+                    op = BinOp.GEq;
+                    break;
+            }
+            expr = new BinaryOpNode(expr, op, right);
+        }
+        return expr;
+    }
+
+    private IExpressionNode Term()
+    {
+        IExpressionNode expr = Factor();
+        while (Match(Plus, Minus))
+        {
+            SyntaxToken opToken = (SyntaxToken) Previous();
+            IExpressionNode right = Factor();
+            BinOp op = BinOp.Add;
+            switch (opToken.Type)
+            {
+                case Plus:
+                    op = BinOp.Add;
+                    break;
+                case Minus:
+                    op = BinOp.Sub;
+                    break;
+            }
+            expr = new BinaryOpNode(expr, op, right);
+        }
+        return expr;
+    }
+
+    private IExpressionNode Factor()
+    {
+        IExpressionNode expr = Unary();
+        while (Match(Multiply, Divide))
+        {
+            SyntaxToken opToken = (SyntaxToken) Previous();
+            IExpressionNode right = Unary();
+            BinOp op = BinOp.Mul;
+            switch (opToken.Type)
+            {
+                case Multiply:
+                    op = BinOp.Mul;
+                    break;
+                case Divide:
+                    op = BinOp.Div;
+                    break;
+            }
+            expr = new BinaryOpNode(expr, op, right);
+        }
+        return expr;
+    }
+
+    private IExpressionNode Unary()
+    {
+        IExpressionNode expr = Primary();
+        if (Match(Minus, Not))
+        {
+            SyntaxToken opToken = (SyntaxToken) Previous();
+            IExpressionNode right = Primary();
+            BinOp op = BinOp.Mul;
+            switch (opToken.Type)
+            {
+                case Multiply:
+                    op = BinOp.Mul;
+                    break;
+                case Divide:
+                    op = BinOp.Div;
+                    break;
+            }
+            expr = new BinaryOpNode(expr, op, right);
+        }
+
+        return expr;
+    }
+
+    private IExpressionNode Primary()
+    {
+        if (Match(Yes, No))
+        {
+            bool value = ((SyntaxToken)Peek()).Type switch
+            {
+                Yes => true,
+                No => false,
+            };
+            return new ValueNode(
+                new Value(
+                    value
+                    )
+                );
+        }
+        else if (Match(out IToken tok1, typeof(StringToken)))
+        {
+            return new ValueNode(
+                new Value(
+                    ((StringToken)tok1).String
+                    )
+                );
+        }
+        else if (Match(out IToken tok2, typeof(NumberToken)))
+        {
+            return new ValueNode(
+                new Value(
+                    ((NumberToken)tok2).Number
+                )
+            );
+        }
+        else if (Match(The))
+        {
+            if (!Match(Result)) throw new Exception();
+            return new TheResultNode();
+        }
+        else 
+        {
+            throw new Exception();
+        }
     }
 }
 
