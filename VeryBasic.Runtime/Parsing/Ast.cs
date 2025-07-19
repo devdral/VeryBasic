@@ -118,11 +118,11 @@ public enum BinOp
     GEq
 }
 
-public class BinaryOpNode : IExpressionNode
+public class BinaryOpNode(IExpressionNode left, BinOp op, IExpressionNode right) : IExpressionNode
 {
-    public IExpressionNode Left;
-    public IExpressionNode Right;
-    public BinOp Op;
+    public IExpressionNode Left = left;
+    public IExpressionNode Right = right;
+    public BinOp Op = op;
 }
 
 public enum UnaryOp
