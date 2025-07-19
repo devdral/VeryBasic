@@ -97,9 +97,9 @@ public interface IExpressionNode : INode {}
 
 public class TheResultNode : IExpressionNode {}
 
-public class ValueNode : IExpressionNode
+public class ValueNode(Value value) : IExpressionNode
 {
-    private Value _value;
+    public Value Value = value;
 }
 
 public enum BinOp
