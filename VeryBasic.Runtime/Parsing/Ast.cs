@@ -245,15 +245,17 @@ public class Ast
                     )
                 );
         }
-        else if (Match(out IToken tok1, typeof(StringToken)))
+
+        if (Match(out IToken? tok1, typeof(StringToken)))
         {
             return new ValueNode(
                 new Value(
                     ((StringToken)tok1).String
-                    )
-                );
+                )
+            );
         }
-        else if (Match(out IToken tok2, typeof(NumberToken)))
+        
+        if (Match(out IToken? tok2, typeof(NumberToken)))
         {
             return new ValueNode(
                 new Value(
@@ -261,15 +263,14 @@ public class Ast
                 )
             );
         }
-        else if (Match(The))
+
+        if (Match(The))
         {
             if (!Match(Result)) throw new Exception();
             return new TheResultNode();
         }
-        else 
-        {
-            throw new Exception();
-        }
+        
+        throw new Exception();
     }
 }
 
