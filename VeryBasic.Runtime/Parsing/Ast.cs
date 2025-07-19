@@ -314,10 +314,10 @@ public enum UnaryOp
     Invert
 }
 
-public class UnaryOpNode : IExpressionNode
+public class UnaryOpNode(UnaryOp op, IExpressionNode expr) : IExpressionNode
 {
-    public IExpressionNode Expr;
-    public UnaryOp Op;
+    public IExpressionNode Expr = expr;
+    public UnaryOp Op = op;
 }
 
 public class IfNode : INode
