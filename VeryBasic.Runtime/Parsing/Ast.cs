@@ -47,19 +47,19 @@ public class Ast
         return false;
     }
 
-    private bool Match(out IToken? Token, params Type[] matches)
+    private bool Match([NotNullWhen(true)] out IToken? token, params Type[] matches)
     {
         IToken current = Peek();
         foreach (Type type in matches)
         {
             if (current.GetType() == type)
             {
-                Token = current;
+                token = current;
                 Advance();
                 return true;
             }
         }
-        Token = null;
+        token = null;
         return false;
     } 
 
