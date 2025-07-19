@@ -39,11 +39,15 @@ public class Tokenizer
         {
             return (char.IsLetter(c) ||
                     c
-                        is '_'
-                        or '='
-                        or '!'
-                        or '<'
-                        or '>'
+                    is '_'
+                    or '='
+                    or '!'
+                    or '<'
+                    or '>'
+                    or '+'
+                    or '-'
+                    or '*'
+                    or '/'
                 );
         }
         
@@ -115,6 +119,24 @@ public class Tokenizer
                         break;
                     case "from":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.From));
+                        break;
+                    case "yes":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Yes));
+                        break;
+                    case "no":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.No));
+                        break;
+                    case "+":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Plus));
+                        break;
+                    case "-":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Minus));
+                        break;
+                    case "*":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Multiply));
+                        break;
+                    case "/":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Divide));
                         break;
                     case "<":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.LessThan));
@@ -214,6 +236,12 @@ public enum SyntaxTokenType
     Or,
     Calculate,
     Result,
+    Divide,
+    Multiply,
+    Plus,
+    Minus,
+    Yes,
+    No,
 }
 
 public class NumberToken(double number) : IToken
