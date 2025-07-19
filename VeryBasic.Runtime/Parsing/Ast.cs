@@ -111,7 +111,11 @@ public enum BinOp
     And,
     Or,
     Equal,
-    NotEqual
+    NotEqual,
+    LessThan,
+    GreaterThan,
+    LEq,
+    GEq
 }
 
 public class BinaryOpNode : IExpressionNode
