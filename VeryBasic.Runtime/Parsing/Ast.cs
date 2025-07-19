@@ -32,21 +32,35 @@ public class Ast
     private bool Match(params SyntaxTokenType[] matches)
     {
         if (IsAtEnd()) return false;
-        else {
-            foreach (SyntaxTokenType match in matches) {
-                if (Peek() is SyntaxToken token)
+        foreach (SyntaxTokenType match in matches) {
+            if (Peek() is SyntaxToken token)
+            {
+                if (token.Type == match)
                 {
-                    if (token.Type == match)
-                    {
-                        Advance();
-                        return true;
-                    }
+                    Advance();
+                    return true;
                 }
             }
         }
 
         return false;
     }
+
+    private bool Match(out IToken? Token, params Type[] matches)
+    {
+        IToken current = Peek();
+        foreach (Type type in matches)
+        {
+            if (current.GetType() == type)
+            {
+                Token = current;
+                Advance();
+                return true;
+            }
+        }
+        Token = null;
+        return false;
+    } 
 
     private IToken Previous()
     {
