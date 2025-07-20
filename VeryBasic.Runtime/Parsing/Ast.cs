@@ -270,6 +270,13 @@ public class Ast
             return new TheResultNode();
         }
         
+        if (Match(LParen))
+        {
+            IExpressionNode expression = Logical();
+            if (!Match(RParen)) throw new Exception();
+            return expression;
+        }
+        
         throw new Exception();
     }
 }
