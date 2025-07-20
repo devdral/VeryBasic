@@ -11,6 +11,11 @@ public class Value
         return (T)_value;
     }
 
+    public bool Equals(Value obj)
+    {
+        return this.Type == obj.Type && this._value == obj._value;
+    } 
+
     public Value(object value)
     {
         Type type = value.GetType();
