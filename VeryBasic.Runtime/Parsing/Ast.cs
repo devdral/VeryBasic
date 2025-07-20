@@ -77,7 +77,7 @@ public class Ast
 
     private bool IsAtEnd()
     {
-        return _index >= _code.Length;
+        return _index > _tokens.Count - 1;
     }
 
     private IToken Peek()
