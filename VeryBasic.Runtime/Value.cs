@@ -4,6 +4,7 @@ public class Value
 {
     public VBType Type;
     private object _value;
+    public object AsObject => _value;
 
     public T Get<T>()
     {
