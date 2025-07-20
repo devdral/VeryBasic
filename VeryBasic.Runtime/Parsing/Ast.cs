@@ -51,6 +51,11 @@ public class Ast
 
     private bool Match([NotNullWhen(true)] out IToken? token, params Type[] matches)
     {
+        if (IsAtEnd())
+        {
+            token = null;
+            return false;
+        }
         IToken current = Peek();
         foreach (Type type in matches)
         {
