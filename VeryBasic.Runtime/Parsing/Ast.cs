@@ -282,13 +282,28 @@ public class ProcCallNode : INode
     public List<IExpressionNode> Args;
 }
 
-public interface IExpressionNode : INode {}
+public interface IExpressionNode : INode
+{
+    // TODO: Move this into INode
+    public T Accept<T>(IVisitor<T> visitor);
+}
 
-public class TheResultNode : IExpressionNode {}
+public class TheResultNode : IExpressionNode
+{
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitTheResultNode(this);
+    }
+}
 
 public class ValueNode(Value value) : IExpressionNode
 {
     public Value Value = value;
+    
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitValueNode(this);
+    }
 }
 
 public enum BinOp
@@ -312,6 +327,11 @@ public class BinaryOpNode(IExpressionNode left, BinOp op, IExpressionNode right)
     public IExpressionNode Left = left;
     public IExpressionNode Right = right;
     public BinOp Op = op;
+    
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitBinaryOpNode(this);
+    }
 }
 
 public enum UnaryOp
@@ -324,6 +344,11 @@ public class UnaryOpNode(UnaryOp op, IExpressionNode expr) : IExpressionNode
 {
     public IExpressionNode Expr = expr;
     public UnaryOp Op = op;
+    
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitUnaryOpNode(this);
+    }
 }
 
 public class IfNode : INode
