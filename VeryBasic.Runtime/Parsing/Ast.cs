@@ -295,6 +295,17 @@ public class Ast
         return new WhileLoopNode(cond, statements);
     }
 
+    private INode RepeatLoop()
+    {
+        IExpressionNode times = Expression();
+        List<INode> statements = new List<INode>();
+        while (!Match(End))
+        {
+            statements.Add(Statement());
+        }
+        return new RepeatLoopNode(times, statements);
+    }
+
     private IExpressionNode Expression()
     {
         return Logical();
