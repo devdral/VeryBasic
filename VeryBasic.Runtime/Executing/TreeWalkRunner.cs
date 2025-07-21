@@ -10,14 +10,13 @@ public class TreeWalkRunner : IVisitor<Value>
     
     private static readonly Value VBNull = new (new Value.Null());
 
-    public TreeWalkRunner(Ast ast)
+    public TreeWalkRunner()
     {
-        _ast = ast.Parse();
         _env = Environment.Default();
     }
-
-    public void Run()
+    public void Run(Ast ast)
     {
+        _ast = ast.Parse();
         foreach (var node in _ast)
         {
             node.Accept(this);
