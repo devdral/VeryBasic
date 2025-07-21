@@ -132,7 +132,150 @@ public class Ast
     
     // Node parsers
 
-    private INode Expression()
+    private List<INode> Program()
+    {
+        List<INode> statements = new List<INode>();
+        while (!IsAtEnd())
+        {
+            statements.Add(Statement());
+        }
+        return statements;
+    }
+
+    private VBType Type()
+    {
+        if (Match(out var typeName, typeof(IdentToken)))
+        {
+            return ((IdentToken)typeName).Name switch
+            {
+                "number" => VBType.Number,
+                "string" => VBType.String,
+                "boolean" => VBType.Boolean,
+                _ => throw new Exception()
+            };
+        }
+        throw new Exception();
+    }
+
+    private INode Statement()
+    {
+        if (Match(Declare))
+        {
+            return VarDec();
+        }
+
+        if (Match(Update))
+        {
+            return VarSet();
+        }
+
+        if (Check(typeof(IdentToken)))
+        {
+            return ProcCall();
+        }
+
+        if (Match(If))
+        {
+            return IfStmt();
+        }
+        throw new Exception();
+    }
+
+    private INode VarDec()
+    {
+        Consume(Variable, "You missed a word: 'variable'.");
+        if (
+            Match(out var nameToken, typeof(IdentToken))
+        )
+        {
+            Consume(Comma, "You forgot a comma before your type choice.");
+            Consume(A, "You forgot an 'a' before your type selection.");
+            VBType type = Type();
+            string varName = ((IdentToken)nameToken).Name;
+            return new VarDecNode(type, varName, null);
+        }
+        throw new Exception();
+    }
+
+    private INode VarSet()
+    {
+        if (!Match(out var nameToken, typeof(IdentToken))) throw new Exception();
+        Consume(To, "You missed a word: 'to'.");
+        string varName = ((IdentToken)nameToken).Name;
+        var value = Expression();
+        return new VarSetNode(varName, value);
+    }
+
+    private INode ProcCall()
+    {
+        if (!Match(out var procNameToken, typeof(IdentToken))) throw new Exception();
+        string procName = ((IdentToken)procNameToken).Name;
+        List<IExpressionNode> args = [];
+        int i = 0;
+        bool shouldBeOnLast = false;
+        while (true)
+        {
+            if (!IsAtEnd() &&
+                (Check(Plus, Minus) || // Unary operators
+                 Check(typeof(NumberToken), typeof(StringToken), typeof(IdentToken)) // Literals
+                 )
+               )
+            {
+                if (shouldBeOnLast) throw new Exception($"You used the word 'and' before the last thing you gave me when using '{procName}'.");
+                args.Add(Expression());
+                if (i > 0)
+                {
+                    Consume(Comma, $"You missed a comma between things you told me when using '{procName}'.");
+                    if (Match(And)) shouldBeOnLast = true;   
+                }
+            }
+            else
+            {
+                break;
+            }
+            ++i;
+        }
+
+        return new ProcCallNode(procName, args);
+    }
+
+    private INode IfStmt()
+    {
+        IExpressionNode cond = Expression();
+        Consume(Then, "You missed a word: 'then'.");
+        List<INode> statements = new List<INode>();
+        bool hasElse = false;
+        while (!Match(End))
+        {
+            statements.Add(Statement());
+            if (Match(Otherwise))
+            {
+                hasElse = true;
+                break;
+            }
+        }
+
+        if (hasElse)
+        {
+            if (Match(Comma))
+            {
+                Consume(If, "You missed a word: 'if'.");
+                return new IfNode(cond, statements, [IfStmt()]);
+            }
+            else
+            {
+                List<INode> elseStatements = new List<INode>();
+                while (!Match(End))
+                {
+                    elseStatements.Add(Statement());
+                }
+                return new IfNode(cond, statements, elseStatements);
+            }
+        }
+        return new IfNode(cond, statements);
+    }
+
+    private IExpressionNode Expression()
     {
         return Logical();
     }
@@ -331,19 +474,23 @@ public class Ast
     }
 }
 
-public interface INode {}
-
-public class ProcCallNode : INode
+public interface INode
 {
-    public string Name;
-    public List<IExpressionNode> Args;
-}
-
-public interface IExpressionNode : INode
-{
-    // TODO: Move this into INode
     public T Accept<T>(IVisitor<T> visitor);
 }
+
+public class ProcCallNode(string name, List<IExpressionNode> args) : INode
+{
+    public string Name = name;
+    public List<IExpressionNode> Args = args;
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitProcCallNode(this);
+    }
+}
+
+public interface IExpressionNode : INode {}
 
 public class TheResultNode : IExpressionNode
 {
@@ -413,33 +560,73 @@ public class IfNode : INode
     public IExpressionNode Condition;
     public List<INode> Then;
     public List<INode>? Else;
+
+    public IfNode(IExpressionNode cond, List<INode> then)
+    {
+        Condition = cond;
+        Then = then;
+    }
+
+    public IfNode(IExpressionNode cond, List<INode> then, List<INode> otherwise)
+    {
+        Condition = cond;
+        Then = then;
+        Else = otherwise;
+    }
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitIfNode(this);
+    }
 }
 
-public class VarDecNode : INode
+public class VarDecNode(VBType type, string name, IExpressionNode? value) : INode
 {
-    public string Name;
-    public IExpressionNode? Value;
+    public string Name = name;
+    public VBType Type = type;
+    public IExpressionNode? Value = value;
+    
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitVarDecNode(this);
+    }
 }
 
-public class VarSetNode : INode
+public class VarSetNode(string name, IExpressionNode value) : INode
 {
-    public string Name;
-    public IExpressionNode Value;
+    public string Name = name;
+    public IExpressionNode Value = value;
+    
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitVarSetNode(this);
+    }
 }
 
-public class CalculateNode : INode
+public class VarRefNode(string name) : IExpressionNode
 {
-    public IExpressionNode Expr;
+    public string Name = name;
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitVarRefNode(this);
+    }
 }
 
-public class RepeatLoopNode : INode
-{
-    public IExpressionNode Times;
-    public List<INode> Loop;
-}
+// TODO: Implement these in parser, tree-walker, etc.
 
-public class WhileLoopNode : INode
-{
-    public IExpressionNode Condition;
-    public List<INode> Loop;
-}
+// public class CalculateNode : INode
+// {
+//     public IExpressionNode Expr;
+// }
+//
+// public class RepeatLoopNode : INode
+// {
+//     public IExpressionNode Times;
+//     public List<INode> Loop;
+// }
+//
+// public class WhileLoopNode : INode
+// {
+//     public IExpressionNode Condition;
+//     public List<INode> Loop;
+// }
