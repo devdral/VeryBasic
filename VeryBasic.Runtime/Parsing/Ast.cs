@@ -32,6 +32,11 @@ public class Ast
         return _tokens[_index++];
     }
 
+    private void Consume(SyntaxTokenType token, string errorMsg)
+    {
+        if (!Match(token)) throw new Exception(errorMsg);
+    }
+
     private bool Match(params SyntaxTokenType[] matches)
     {
         if (IsAtEnd()) return false;
@@ -41,6 +46,23 @@ public class Ast
                 if (token.Type == match)
                 {
                     Advance();
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+    
+    private bool Check(params SyntaxTokenType[] matches)
+    {
+        if (IsAtEnd()) return false;
+        foreach (SyntaxTokenType match in matches) {
+            if (Peek() is SyntaxToken token)
+            {
+                if (token.Type == match)
+                {
+                    // Don't advance, only look.
                     return true;
                 }
             }
@@ -68,7 +90,25 @@ public class Ast
         }
         token = null;
         return false;
-    } 
+    }
+    
+    private bool Check(params Type[] matches)
+    {
+        if (IsAtEnd())
+        {
+            return false;
+        }
+        IToken current = Peek();
+        foreach (Type type in matches)
+        {
+            if (current.GetType() == type)
+            {
+                // Don't advance; only look.
+                return true;
+            }
+        }
+        return false;
+    }
 
     private IToken Previous()
     {
@@ -83,6 +123,11 @@ public class Ast
     private IToken Peek()
     {
         return _tokens[_index];
+    }
+    
+    private IToken Peek(int offset)
+    {
+        return _tokens[_index + offset];
     }
     
     // Node parsers
