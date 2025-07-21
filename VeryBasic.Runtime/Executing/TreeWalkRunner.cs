@@ -190,7 +190,7 @@ public class TreeWalkRunner : IVisitor<Value>
     public Value VisitIfNode(IfNode node)
     {
         Value cond = node.Condition.Accept(this);
-        if (cond.Type != VBType.Boolean) throw new Exception("An 'if' statement cannot check 'if' something that is not a yes-or-no statement is true.");
+        if (cond.Type != VBType.Boolean) throw new Exception("An 'if' statement cannot check 'if' something that is not a yes-or-no is true.");
         if (cond.Get<bool>())
         {
             foreach (INode statement in node.Then)
@@ -201,6 +201,21 @@ public class TreeWalkRunner : IVisitor<Value>
         else if (node.Else != null)
         {
             foreach (INode statement in node.Else)
+            {
+                statement.Accept(this);
+            }
+        }
+        return VBNull;
+    }
+
+    public Value VisitWhileLoopNode(WhileLoopNode node)
+    {
+        while (node.Condition
+               .Accept(this)
+               .Get<bool>()
+               )
+        {
+            foreach (INode statement in node.Loop)
             {
                 statement.Accept(this);
             }
