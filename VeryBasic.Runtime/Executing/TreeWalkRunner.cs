@@ -16,10 +16,31 @@ public class TreeWalkRunner : IVisitor<Value>
     }
     public void Run(Ast ast)
     {
-        _ast = ast.Parse();
+        try
+        {
+            _ast = ast.Parse();
+        }
+        catch (Exception e)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("I could not understand your instructions because:");
+            Console.WriteLine(e.Message);
+            Console.ResetColor();
+        }
+
         foreach (var node in _ast)
         {
-            node.Accept(this);
+            try
+            {
+                node.Accept(this);
+            }
+            catch (Exception e)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("An issue I see with your instructions:");
+                Console.WriteLine(e.Message);
+                Console.ResetColor();
+            }
         }
     }
 
