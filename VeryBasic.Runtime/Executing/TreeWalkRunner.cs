@@ -159,4 +159,52 @@ public class TreeWalkRunner : IVisitor<Value>
     {
         throw new NotImplementedException();
     }
+
+    public Value VisitVarDecNode(VarDecNode node)
+    {
+        _env.CreateVar(node.Name, node.Type);
+        return VBNull;
+    }
+
+    public Value VisitVarSetNode(VarSetNode node)
+    {
+        _env.SetVar(node.Name, node.Value.Accept(this));
+        return VBNull;
+    }
+
+    public Value? VisitProcCallNode(ProcCallNode node)
+    {
+        List<Value> args = [];
+        foreach (var arg in node.Args)
+        {
+            args.Add(arg.Accept(this));
+        }
+        return _env.CallProc(node.Name, args);
+    }
+
+    public Value VisitVarRefNode(VarRefNode node)
+    {
+        return _env.GetVar(node.Name);
+    }
+
+    public Value VisitIfNode(IfNode node)
+    {
+        Value cond = node.Condition.Accept(this);
+        if (cond.Type != VBType.Boolean) throw new Exception("An 'if' statement cannot check 'if' something that is not a yes-or-no statement is true.");
+        if (cond.Get<bool>())
+        {
+            foreach (INode statement in node.Then)
+            {
+                statement.Accept(this);
+            }
+        }
+        else if (node.Else != null)
+        {
+            foreach (INode statement in node.Else)
+            {
+                statement.Accept(this);
+            }
+        }
+        return VBNull;
+    }
 }
