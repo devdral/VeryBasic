@@ -58,9 +58,24 @@ public class Tokenizer
             if (char.IsDigit(c))
             {
                 HandleNumber(c);
-            } else if (c == '"') {
+            }
+            else if (c is '"')
+            {
                 HandleString();
-            } else if (IsSyntaxTokenPart(c))
+            }
+            else if (c is ',')
+            {
+                _tokens.Add(new SyntaxToken(SyntaxTokenType.Comma));
+            }
+            else if (c is '(') 
+            {
+                _tokens.Add(new SyntaxToken(SyntaxTokenType.LParen));
+            }
+            else if (c is ')') 
+            {
+                _tokens.Add(new SyntaxToken(SyntaxTokenType.RParen));
+            }
+            else if (IsSyntaxTokenPart(c))
             {
                 string token = c.ToString();
                 while (!IsAtEnd() && IsSyntaxTokenPart(Peek()))
@@ -104,9 +119,6 @@ public class Tokenizer
                         break;
                     case "otherwise":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Otherwise));
-                        break;
-                    case ",":
-                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Comma));
                         break;
                     case "a":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.A));
@@ -172,7 +184,7 @@ public class Tokenizer
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Result));
                         break;
                     default:
-                        _tokens.Add(new IdentToken(token));
+                        _tokens.Add(new IdentToken(token.ToLower()));
                         break;
                 }
             }
@@ -242,6 +254,8 @@ public enum SyntaxTokenType
     Minus,
     Yes,
     No,
+    LParen,
+    RParen,
 }
 
 public class NumberToken(double number) : IToken
