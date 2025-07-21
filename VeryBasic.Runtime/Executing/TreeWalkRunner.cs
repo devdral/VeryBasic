@@ -6,9 +6,14 @@ public class TreeWalkRunner : IVisitor<Value>
 {
     private List<INode> _ast;
 
+    private Environment _env;
+    
+    private static readonly Value VBNull = new (new Value.Null());
+
     public TreeWalkRunner(Ast ast)
     {
         _ast = ast.Parse();
+        _env = Environment.Default();
     }
 
     public void Run()
