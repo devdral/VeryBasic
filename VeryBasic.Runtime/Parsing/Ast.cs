@@ -7,9 +7,6 @@ namespace VeryBasic.Runtime.Parsing;
 public class Ast
 {
     private string _code;
-    
-    private List<INode> _nodes;
-    public List<INode> Nodes => _nodes;
 
     private int _index;
     
