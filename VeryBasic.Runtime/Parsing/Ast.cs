@@ -175,6 +175,12 @@ public class Ast
         {
             return IfStmt();
         }
+
+        if (Match(While))
+        {
+            return WhileLoop();
+        }
+        
         throw new Exception();
     }
 
@@ -270,6 +276,18 @@ public class Ast
             }
         }
         return new IfNode(cond, statements);
+    }
+
+    private INode WhileLoop()
+    {
+        IExpressionNode cond = Expression();
+        List<INode> statements = new List<INode>();
+        while (!Match(End))
+        {
+            statements.Add(Statement());
+        }
+
+        return new WhileLoopNode(cond, statements);
     }
 
     private IExpressionNode Expression()
@@ -626,9 +644,20 @@ public class VarRefNode(string name) : IExpressionNode
 //     public IExpressionNode Times;
 //     public List<INode> Loop;
 // }
-//
-// public class WhileLoopNode : INode
-// {
-//     public IExpressionNode Condition;
-//     public List<INode> Loop;
-// }
+
+public class WhileLoopNode : INode
+{
+    public IExpressionNode Condition;
+    public List<INode> Loop;
+
+    public WhileLoopNode(IExpressionNode condition, List<INode> loop)
+    {
+        Condition = condition;
+        Loop = loop;
+    }
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitWhileLoopNode(this);
+    }
+}
