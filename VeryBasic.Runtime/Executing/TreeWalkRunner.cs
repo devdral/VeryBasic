@@ -20,8 +20,7 @@ public class TreeWalkRunner : IVisitor<Value>
     {
         foreach (var node in _ast)
         {
-            // TODO: Change this to just INode after adding Accept to interface INode
-            Console.WriteLine(((IExpressionNode)node).Accept(this).AsObject);
+            node.Accept(this);
         }
     }
 
