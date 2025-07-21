@@ -12,4 +12,5 @@ public interface IVisitor<out T>
     public T VisitVarRefNode(VarRefNode node);
     public T VisitIfNode(IfNode node);
     public T VisitWhileLoopNode(WhileLoopNode node);
+    public T VisitRepeatLoopNode(RepeatLoopNode node);
 }
