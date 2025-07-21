@@ -52,128 +52,60 @@ public class TreeWalkRunner : IVisitor<Value>
     public Value VisitUnaryOpNode(UnaryOpNode node)
     {
         Value value = node.Expr.Accept(this);
-        if (node.Op == UnaryOp.Invert)
+        return node.Op switch
         {
-            if (value.Type == VBType.Boolean)
-            {
-                return new Value(!value.Get<bool>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == UnaryOp.Negate)
-        {
-            if (value.Type == VBType.Number)
-            {
-                return new Value(-value.Get<double>());
-            }
-            
-            throw new Exception();
-        }
-        
-        throw new Exception();
+            UnaryOp.Invert when value.Type == VBType.Boolean => new Value(!value.Get<bool>()),
+            UnaryOp.Invert => throw new Exception(
+                $"I can't say when a {value.Type} is false because it's not a boolean (yes-or-no)."),
+            UnaryOp.Negate when value.Type == VBType.Number => new Value(-value.Get<double>()),
+            UnaryOp.Negate => throw new Exception($"I can't give the opposite sign of {value.Type}; it's not a number."),
+        };
     }
 
     public Value VisitBinaryOpNode(BinaryOpNode node)
     {
         Value left = node.Left.Accept(this);
         Value right = node.Right.Accept(this);
-        if (node.Op == BinOp.Add)
+        return node.Op switch
         {
-            if (left.Type == VBType.Number && right.Type == VBType.Number)
-            {
-                return new Value(left.Get<double>() + right.Get<double>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.Sub)
-        {
-            if (left.Type == VBType.Number && right.Type == VBType.Number)
-            {
-                return new Value(left.Get<double>() - right.Get<double>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.Mul)
-        {
-            if (left.Type == VBType.Number && right.Type == VBType.Number)
-            {
-                return new Value(left.Get<double>() * right.Get<double>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.Div)
-        {
-            if (left.Type == VBType.Number && right.Type == VBType.Number)
-            {
-                return new Value(left.Get<double>() / right.Get<double>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.And)
-        {
-            if (left.Type == VBType.Boolean && right.Type == VBType.Boolean)
-            {
-                return new Value(left.Get<bool>() && right.Get<bool>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.Or)
-        {
-            if (left.Type == VBType.Boolean && right.Type == VBType.Boolean)
-            {
-                return new Value(left.Get<bool>() || right.Get<bool>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.Equal)
-        {
-            return new Value(left.Equals(right));
-        }
-        
-        if (node.Op == BinOp.LessThan)
-        {
-            if (left.Type == VBType.Number && right.Type == VBType.Number)
-            {
-                return new Value(left.Get<double>() < right.Get<double>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.GreaterThan)
-        {
-            if (left.Type == VBType.Number && right.Type == VBType.Number)
-            {
-                return new Value(left.Get<double>() > right.Get<double>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.LEq)
-        {
-            if (left.Type == VBType.Number && right.Type == VBType.Number)
-            {
-                return new Value(left.Get<double>() <= right.Get<double>());
-            }
-            throw new Exception();
-        }
-        
-        if (node.Op == BinOp.GEq)
-        {
-            if (left.Type == VBType.Number && right.Type == VBType.Number)
-            {
-                return new Value(left.Get<double>() >= right.Get<double>());
-            }
-            throw new Exception();
-        }
-        
-        throw new Exception();
+            BinOp.Add when left.Type == VBType.Number && right.Type == VBType.Number => new Value(left.Get<double>() +
+                right.Get<double>()),
+            BinOp.Add => throw new Exception("I can't add two things if they aren't both numbers."),
+            BinOp.Sub when left.Type == VBType.Number && right.Type == VBType.Number => new Value(left.Get<double>() -
+                right.Get<double>()),
+            BinOp.Sub => throw new Exception("I can't subtract two things if they aren't numbers."),
+            BinOp.Mul when left.Type == VBType.Number && right.Type == VBType.Number => new Value(left.Get<double>() *
+                right.Get<double>()),
+            BinOp.Mul => throw new Exception("I can't multiply two things if they aren't numbers."),
+            BinOp.Div when left.Type == VBType.Number && right.Type == VBType.Number => new Value(left.Get<double>() /
+                right.Get<double>()),
+            BinOp.Div => throw new Exception("I can't divide two things if they aren't numbers."),
+            BinOp.And when left.Type == VBType.Boolean && right.Type == VBType.Boolean => new Value(left.Get<bool>() &&
+                right.Get<bool>()),
+            BinOp.And => throw new Exception(
+                "I can't see when two things are true if they aren't both booleans (yes's-or-no's)."),
+            BinOp.Or when left.Type == VBType.Boolean && right.Type == VBType.Boolean => new Value(left.Get<bool>() ||
+                right.Get<bool>()),
+            BinOp.Or => throw new Exception(
+                "I can't see when either of two things are true if they aren't both booleans (yes's-or-no's)."),
+            BinOp.Equal => new Value(left.Equals(right)),
+            BinOp.LessThan when left.Type == VBType.Number && right.Type == VBType.Number => new Value(
+                left.Get<double>() < right.Get<double>()),
+            BinOp.LessThan => throw new Exception(
+                "I can't see when one thing is less than another if they aren't both numbers."),
+            BinOp.GreaterThan when left.Type == VBType.Number && right.Type == VBType.Number => new Value(
+                left.Get<double>() > right.Get<double>()),
+            BinOp.GreaterThan => throw new Exception(
+                "I can't see when one thing is greater than another if they aren't both numbers."),
+            BinOp.LEq when left.Type == VBType.Number && right.Type == VBType.Number => new Value(left.Get<double>() <=
+                right.Get<double>()),
+            BinOp.LEq => throw new Exception(
+                "I can't see when one thing is less than (or equal) to another if they aren't both numbers."),
+            BinOp.GEq when left.Type == VBType.Number && right.Type == VBType.Number => new Value(left.Get<double>() >=
+                right.Get<double>()),
+            BinOp.GEq => throw new Exception(
+                "I can't see when one thing is greater than (or equal) to another if they aren't both numbers."),
+        };
     }
 
     public Value VisitTheResultNode(TheResultNode node)

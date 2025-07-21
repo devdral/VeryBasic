@@ -25,13 +25,14 @@ public class Environment
 
     public void SetVar(string name, Value value)
     {
-        Variable var = _vars[name];
+        if (!_vars.TryGetValue(name, out Variable? var)) throw new Exception($"The variable {name} hasn't been created yet.");
         var.Value = Value.From(value, var.Type);
     }
 
     public Value GetVar(string name)
     {
-        return _vars[name].Value;
+        if (!_vars.TryGetValue(name, out Variable? value)) throw new Exception($"The variable {name} hasn't been created yet.");
+        return value.Value;
     }
 
     public void CreateProc(string name, IProcedure proc)
@@ -41,7 +42,7 @@ public class Environment
 
     public Value? CallProc(string name, List<Value> arguments)
     {
-        IProcedure proc = _procs[name];
+        if (!_procs.TryGetValue(name, out IProcedure? proc)) throw new Exception($"I don't know how to {name}.");
         if (arguments.Count < proc.ExpectedArguments.Count)
             throw new Exception($"You put too few things for me to have used '{name}'.");
         for (int i = 0; i < arguments.Count; i++)
