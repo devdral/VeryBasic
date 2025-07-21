@@ -222,4 +222,21 @@ public class TreeWalkRunner : IVisitor<Value>
         }
         return VBNull;
     }
+
+    public Value VisitRepeatLoopNode(RepeatLoopNode node)
+    {
+        double timesAsDouble = node.Times
+            .Accept(this)
+            .Get<double>();
+        if (timesAsDouble % 1 != 0) throw new Exception("You can't do something a fractional number of times.");
+        int times = (int)timesAsDouble;
+        for (int i = 0; i < times; i++)
+        {
+            foreach (INode statement in node.Loop)
+            {
+                statement.Accept(this);
+            }
+        }
+        return VBNull;
+    }
 }

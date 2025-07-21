@@ -180,6 +180,11 @@ public class Ast
         {
             return WhileLoop();
         }
+
+        if (Match(Repeat))
+        {
+            return RepeatLoop();
+        }
         
         throw new Exception();
     }
@@ -638,12 +643,23 @@ public class VarRefNode(string name) : IExpressionNode
 // {
 //     public IExpressionNode Expr;
 // }
-//
-// public class RepeatLoopNode : INode
-// {
-//     public IExpressionNode Times;
-//     public List<INode> Loop;
-// }
+
+public class RepeatLoopNode : INode
+{
+    public IExpressionNode Times;
+    public List<INode> Loop;
+
+    public RepeatLoopNode(IExpressionNode times, List<INode> loop)
+    {
+        Times = times;
+        Loop = loop;
+    }
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitRepeatLoopNode(this);
+    }
+}
 
 public class WhileLoopNode : INode
 {
