@@ -1,20 +1,25 @@
+using VeryBasic.Runtime.Parsing;
+
 namespace VeryBasic.Runtime;
 
 public class Value
 {
     public VBType Type;
     private object _value;
-    public object AsObject => _value;
 
     public T Get<T>()
     {
+        if (Type == VBType.Void)
+        {
+            throw new InvalidCastException("Cannot get value of Void.");
+        }
         return (T)_value;
     }
 
     public bool Equals(Value obj)
     {
-        return this.Type == obj.Type && this._value == obj._value;
-    } 
+        return this.Type == obj.Type && this._value.Equals(obj._value);
+    }
 
     public Value(object value)
     {
@@ -28,6 +33,9 @@ public class Value
         } else if (type == typeof(string))
         {
             this.Type = VBType.String;
+        } else if (type == typeof(Null))
+        {
+            this.Type = VBType.Void;
         }
         else
         {
@@ -36,6 +44,8 @@ public class Value
 
         _value = value;
     }
+    
+    public class Null {}
 }
 
 public enum VBType
@@ -43,4 +53,5 @@ public enum VBType
     Number,
     String,
     Boolean,
+    Void
 }
