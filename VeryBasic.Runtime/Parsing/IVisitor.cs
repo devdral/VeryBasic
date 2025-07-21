@@ -11,4 +11,5 @@ public interface IVisitor<out T>
     public T VisitProcCallNode(ProcCallNode node);
     public T VisitVarRefNode(VarRefNode node);
     public T VisitIfNode(IfNode node);
+    public T VisitWhileLoopNode(WhileLoopNode node);
 }
