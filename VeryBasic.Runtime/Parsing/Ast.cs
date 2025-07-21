@@ -24,7 +24,7 @@ public class Ast
     {
         List<IToken> tokens = new Tokenizer(_code).Tokenize();
         _tokens = tokens;
-        return [Expression()];
+        return Program();
     }
 
     private IToken Advance()
