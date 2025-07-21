@@ -1,3 +1,4 @@
+using System.Globalization;
 using VeryBasic.Runtime.Parsing;
 
 namespace VeryBasic.Runtime;
@@ -43,6 +44,32 @@ public class Value
         }
 
         _value = value;
+    }
+
+    public static Value From(Value other, VBType type)
+    {
+        if (other.Type == type)
+        {
+            return other;
+        }
+        
+        if (other.Type == VBType.Number &&
+            type       == VBType.String)
+        {
+            return new Value(other.Get<double>().ToString(CultureInfo.CurrentCulture));
+        }
+        
+        if (other.Type == VBType.Boolean &&
+                   type == VBType.String)
+        {
+            return new Value(other.Get<bool>() switch
+            {
+                true => "Yes!",
+                false => "No.",
+            });
+        }
+        
+        throw new InvalidCastException($"I can't turn a {other.Type} into a {type}");
     }
     
     public class Null {}

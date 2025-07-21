@@ -25,7 +25,8 @@ public class Environment
 
     public void SetVar(string name, Value value)
     {
-        _vars[name].Value = value;
+        Variable var = _vars[name];
+        var.Value = Value.From(value, var.Type);
     }
 
     public Value GetVar(string name)
@@ -45,11 +46,7 @@ public class Environment
             throw new Exception($"You put too few things for me to have used '{name}'.");
         for (int i = 0; i < arguments.Count; i++)
         {
-            VBType type = arguments[i].Type;
-            if (type != proc.ExpectedArguments[i])
-            {
-                throw new Exception($"You needed to have put a {proc.ExpectedArguments[i]}, but you put a {type}.");
-            }
+            arguments[i] = Value.From(arguments[i], proc.ExpectedArguments[i]);
         }
 
         return proc.Run(arguments);
