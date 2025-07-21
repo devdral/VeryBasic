@@ -454,6 +454,11 @@ public class Ast
             );
         }
 
+        if (Match(out IToken? tok3, typeof(IdentToken)))
+        {
+            return new VarRefNode(((IdentToken)tok3).Name);
+        }
+
         if (Match(The))
         {
             if (!Match(Result)) throw new Exception();
