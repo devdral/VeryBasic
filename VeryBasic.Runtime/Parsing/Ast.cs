@@ -224,8 +224,8 @@ public class Ast
         while (true)
         {
             if (!IsAtEnd() &&
-                (Check(Plus, Minus) || // Unary operators
-                 Check(typeof(NumberToken), typeof(StringToken), typeof(IdentToken)) // Literals
+                (Check(Plus, Minus, The) || // Unary operators / keywords
+                 Check(typeof(NumberToken), typeof(StringToken), typeof(IdentToken)) // Literals/varrefs
                  )
                )
             {
