@@ -58,13 +58,21 @@ public class Environment
     {
         var env = new Environment();
 
-        Value? Print(List<Value> args)
+        Value Print(List<Value> args)
         {
             Console.WriteLine(args[0].Get<string>());
-            return null;
+            return TreeWalkRunner.VBNull;
         }
         var printProc = new ExternalProcedure(Print, VBType.Void, VBType.String);
         env.CreateProc("print", printProc);
+
+        Value Input(List<Value> args)
+        {
+            Console.Write("?");
+            return new Value(Console.ReadLine());
+        }
+        var inputProc = new ExternalProcedure(Input, VBType.String);
+        env.CreateProc("take input", inputProc);
         return env;
     }
 }
