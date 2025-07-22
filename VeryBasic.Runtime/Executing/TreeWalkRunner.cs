@@ -110,7 +110,11 @@ public class TreeWalkRunner : IVisitor<Value>
 
     public Value VisitTheResultNode(TheResultNode node)
     {
-        throw new NotImplementedException();
+        if (_env.TheResult == VBNull)
+        {
+            throw new Exception("The prior statement did not result in anything.");
+        }
+        return _env.TheResult;
     }
 
     public Value VisitVarDecNode(VarDecNode node)

@@ -12,6 +12,7 @@ public class Environment
     
     private Dictionary<string, Variable> _vars = new ();
     private Dictionary<string, IProcedure> _procs = new ();
+    public Value TheResult = TreeWalkRunner.VBNull;
 
     public void CreateVar(string name, VBType type)
     {
