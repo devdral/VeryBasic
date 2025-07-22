@@ -15,13 +15,13 @@ public class Tokenizer
     {
         void HandleString()
         {
-            char c = Advance();
             string str = "";
-            while (!IsAtEnd() && c != '"')
+            while (!IsAtEnd() && Peek() != '"')
             {
-                str += c;
-                c = Advance();
+                str += Advance();
             }
+
+            Advance();
             _tokens.Add(new StringToken(str));
         }
 
@@ -74,6 +74,18 @@ public class Tokenizer
             else if (c is ')') 
             {
                 _tokens.Add(new SyntaxToken(SyntaxTokenType.RParen));
+            }
+            else if (c is '[')
+            {
+                _tokens.Add(new SyntaxToken(SyntaxTokenType.LBracket));
+            }
+            else if (c is ']')
+            {
+                _tokens.Add(new SyntaxToken(SyntaxTokenType.RBracket));
+            }
+            else if (c is '.')
+            {
+                _tokens.Add(new SyntaxToken(SyntaxTokenType.Period));
             }
             else if (IsSyntaxTokenPart(c))
             {
@@ -208,6 +220,12 @@ public class Tokenizer
     {
         return _source[_index];
     }
+    
+    private char? Peek(int offset)
+    {
+        if (_index + offset >= _source.Length) return null;
+        return _source[_index + offset];
+    }
 }
 
 public interface IToken {}
@@ -256,6 +274,9 @@ public enum SyntaxTokenType
     No,
     LParen,
     RParen,
+    LBracket,
+    RBracket,
+    Period,
 }
 
 public class NumberToken(double number) : IToken

@@ -67,6 +67,23 @@ public class Ast
 
         return false;
     }
+    
+    private bool Check(int offset, params SyntaxTokenType[] matches)
+    {
+        if (IsAtEnd()) return false;
+        foreach (SyntaxTokenType match in matches) {
+            if (Peek(offset) is SyntaxToken token)
+            {
+                if (token.Type == match)
+                {
+                    // Don't advance, only look.
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     private bool Match([NotNullWhen(true)] out IToken? token, params Type[] matches)
     {
@@ -122,8 +139,9 @@ public class Ast
         return _tokens[_index];
     }
     
-    private IToken Peek(int offset)
+    private IToken? Peek(int offset)
     {
+        if (_index + offset >= _tokens.Count) return null;
         return _tokens[_index + offset];
     }
     
@@ -135,6 +153,7 @@ public class Ast
         while (!IsAtEnd())
         {
             statements.Add(Statement());
+            Consume(Period, "You forgot a period. Mind your punctuation!");
         }
         return statements;
     }
@@ -217,22 +236,40 @@ public class Ast
 
     private INode ProcCall()
     {
-        if (!Match(out var procNameToken, typeof(IdentToken))) throw new Exception("You forgot the name of what you were trying to tell me to do.");
-        string procName = ((IdentToken)procNameToken).Name;
+        // TODO: Remove unnecessary allocations; use StringBuilder
+        string procName = "";
+        int index1 = 0;
+        while (!(IsAtEnd() || Check(LBracket)))
+        {
+            string word;
+            if (Match(out var procNameToken, typeof(IdentToken)))
+            {
+                word = ((IdentToken)procNameToken).Name;
+            } 
+            else if (Check(Period))
+            {
+                return new ProcCallNode(procName.Trim(), []);
+            }
+            else
+                break;
+            if (index1 > 0) procName += " ";
+            procName += word;
+            ++index1;
+        }
         List<IExpressionNode> args = [];
-        int i = 0;
+        int index2 = 0;
         bool shouldBeOnLast = false;
         while (true)
         {
             if (!IsAtEnd() &&
-                (Check(Plus, Minus, The) || // Unary operators / keywords
-                 Check(typeof(NumberToken), typeof(StringToken), typeof(IdentToken)) // Literals/varrefs
+                (Check(Plus, Minus, The, LBracket) || // Unary operators / keywords
+                 Check(typeof(NumberToken), typeof(StringToken)) // Literals/varrefs
                  )
                )
             {
                 if (shouldBeOnLast) throw new Exception($"You used the word 'and' before the last thing you gave me when using '{procName}'.");
                 args.Add(Expression());
-                if (i > 0)
+                if (index2 > 0)
                 {
                     Consume(Comma, $"You missed a comma between things you told me when using '{procName}'.");
                     if (Match(And)) shouldBeOnLast = true;   
@@ -242,7 +279,7 @@ public class Ast
             {
                 break;
             }
-            ++i;
+            ++index2;
         }
 
         return new ProcCallNode(procName, args);
@@ -489,14 +526,25 @@ public class Ast
             );
         }
 
-        if (Match(out IToken? tok3, typeof(IdentToken)))
+        if (Match(LBracket))
         {
-            return new VarRefNode(((IdentToken)tok3).Name);
+            string varName = "";
+            int index = 0;
+            while (!Check(RBracket))
+            {
+                if (index > 0) varName += " ";
+                Match(out IToken? tok3, typeof(IdentToken));
+                varName += ((IdentToken)tok3).Name;
+                ++index;
+            }
+
+            Advance();
+            return new VarRefNode(varName);
         }
 
         if (Match(The))
         {
-            if (!Match(Result)) throw new Exception("You forgot the word 'result'.");
+            Consume(Result, "You forgot the word 'result'.");
             return new TheResultNode();
         }
         
