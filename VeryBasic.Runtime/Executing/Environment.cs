@@ -16,7 +16,7 @@ public class Environment
 
     public void CreateVar(string name, VBType type)
     {
-        _vars[name] = new Variable(type, null);
+        _vars[name] = new Variable(type, TreeWalkRunner.VBNull);
     }
     
     public void CreateVar(string name, VBType type, Value value)
