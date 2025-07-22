@@ -26,6 +26,7 @@ public class TreeWalkRunner : IVisitor<Value>
             Console.WriteLine("I could not understand your instructions because:");
             Console.WriteLine(e.Message);
             Console.ResetColor();
+            return;
         }
 
         foreach (var node in _ast)
