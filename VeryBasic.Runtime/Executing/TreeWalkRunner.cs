@@ -8,7 +8,7 @@ public class TreeWalkRunner : IVisitor<Value>
 
     private Environment _env;
     
-    private static readonly Value VBNull = new (new Value.Null());
+    public static readonly Value VBNull = new (new Value.Null());
 
     public TreeWalkRunner()
     {
@@ -33,7 +33,7 @@ public class TreeWalkRunner : IVisitor<Value>
         {
             try
             {
-                node.Accept(this);
+                _env.TheResult = node.Accept(this);
             }
             catch (Exception e)
             {
