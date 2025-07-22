@@ -143,15 +143,16 @@ public class Ast
     {
         if (Match(out var typeName, typeof(IdentToken)))
         {
-            return ((IdentToken)typeName).Name switch
+            string typeNameS = ((IdentToken)typeName).Name;
+            return typeNameS switch
             {
                 "number" => VBType.Number,
                 "string" => VBType.String,
                 "boolean" => VBType.Boolean,
-                _ => throw new Exception()
+                _ => throw new Exception($"I don't know what a {typeNameS} is.")
             };
         }
-        throw new Exception();
+        throw new Exception("You forgot to put the name of the kind of thing you wanted.");
     }
 
     private INode Statement()
@@ -186,7 +187,7 @@ public class Ast
             return RepeatLoop();
         }
         
-        throw new Exception();
+        throw new Exception("I don't understand what you want me to do.");
     }
 
     private INode VarDec()
@@ -202,12 +203,12 @@ public class Ast
             string varName = ((IdentToken)nameToken).Name;
             return new VarDecNode(type, varName, null);
         }
-        throw new Exception();
+        throw new Exception("You forgot to put the name of variable.");
     }
 
     private INode VarSet()
     {
-        if (!Match(out var nameToken, typeof(IdentToken))) throw new Exception();
+        if (!Match(out var nameToken, typeof(IdentToken))) throw new Exception("You forgot the variable name.");
         Consume(To, "You missed a word: 'to'.");
         string varName = ((IdentToken)nameToken).Name;
         var value = Expression();
@@ -216,7 +217,7 @@ public class Ast
 
     private INode ProcCall()
     {
-        if (!Match(out var procNameToken, typeof(IdentToken))) throw new Exception();
+        if (!Match(out var procNameToken, typeof(IdentToken))) throw new Exception("You forgot the name of what you were trying to tell me to do.");
         string procName = ((IdentToken)procNameToken).Name;
         List<IExpressionNode> args = [];
         int i = 0;
@@ -495,18 +496,18 @@ public class Ast
 
         if (Match(The))
         {
-            if (!Match(Result)) throw new Exception();
+            if (!Match(Result)) throw new Exception("You forgot the word 'result'.");
             return new TheResultNode();
         }
         
         if (Match(LParen))
         {
             IExpressionNode expression = Logical();
-            if (!Match(RParen)) throw new Exception();
+            if (!Match(RParen)) throw new Exception("You opened a parenthesis in a math expression, but you forgot to close it.");
             return expression;
         }
         
-        throw new Exception();
+        throw new Exception("I don't understand what you wanted to put here.");
     }
 }
 
