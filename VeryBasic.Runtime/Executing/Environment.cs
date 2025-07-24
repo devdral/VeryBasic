@@ -73,6 +73,14 @@ public class Environment
         }
         var inputProc = new ExternalProcedure(Input, VBType.String);
         env.CreateProc("take input", inputProc);
+        
+        Value InputWithPrompt(List<Value> args)
+        {
+            Console.Write(args[0].Get<string>());
+            return new Value(Console.ReadLine());
+        }
+        var inputWithPromptProc = new ExternalProcedure(InputWithPrompt, VBType.String, VBType.String);
+        env.CreateProc("take input with prompt", inputWithPromptProc);
         return env;
     }
 }
