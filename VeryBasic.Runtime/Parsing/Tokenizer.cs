@@ -87,6 +87,10 @@ public class Tokenizer
             {
                 _tokens.Add(new SyntaxToken(SyntaxTokenType.Period));
             }
+            else if (c is '#')
+            {
+                _tokens.Add(new SyntaxToken(SyntaxTokenType.NumberSign));
+            }
             else if (IsSyntaxTokenPart(c))
             {
                 string token = c.ToString();
@@ -110,6 +114,15 @@ public class Tokenizer
                         break;
                     case "create":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Declare));
+                        break;
+                    case "get":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Get));
+                        break;
+                    case "item":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Item));
+                        break;
+                    case "of":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Of));
                         break;
                     case "variable":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Variable));
@@ -189,11 +202,11 @@ public class Tokenizer
                     case "not":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Not));
                         break;
-                    case "calculate":
-                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Calculate));
-                        break;
                     case "result":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Result));
+                        break;
+                    case "list":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.List));
                         break;
                     default:
                         _tokens.Add(new IdentToken(token.ToLower()));
@@ -241,6 +254,7 @@ public enum SyntaxTokenType
     End,
     Declare,
     Variable,
+    List,
     Update,
     If,
     Else,
@@ -264,7 +278,6 @@ public enum SyntaxTokenType
     Not,
     And,
     Or,
-    Calculate,
     Result,
     Divide,
     Multiply,
@@ -277,6 +290,10 @@ public enum SyntaxTokenType
     LBracket,
     RBracket,
     Period,
+    Get,
+    Item,
+    Of,
+    NumberSign
 }
 
 public class NumberToken(double number) : IToken

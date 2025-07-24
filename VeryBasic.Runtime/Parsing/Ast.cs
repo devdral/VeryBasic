@@ -170,6 +170,9 @@ public class Ast
                 "boolean" => VBType.Boolean,
                 _ => throw new Exception($"I don't know what a {typeNameS} is.")
             };
+        } else if (Match(List))
+        {
+            return VBType.List;
         }
         throw new Exception("You forgot to put the name of the kind of thing you wanted.");
     }
@@ -183,6 +186,10 @@ public class Ast
 
         if (Match(Update))
         {
+            if (Match(Item))
+            {
+                return ListSetStmt();
+            }
             return VarSet();
         }
 
@@ -205,8 +212,24 @@ public class Ast
         {
             return RepeatLoop();
         }
+
+        if (Match(Get))
+        {
+            return ListGetStmt();
+        }
         
         throw new Exception("I don't understand what you want me to do.");
+    }
+
+    private INode ListSetStmt()
+    {
+        Consume(NumberSign, "You forgot a '#' (number sign).");
+        var index = Expression();
+        Consume(Of, "You missed a word: 'of'.");
+        var list = Expression();
+        Consume(To, "You missed a word: 'to'.");
+        var value = Expression();
+        return new ListSetNode(index, list, value);
     }
 
     private INode VarDec()
@@ -262,7 +285,7 @@ public class Ast
         while (true)
         {
             if (!IsAtEnd() &&
-                (Check(Plus, Minus, The, LBracket) || // Unary operators / keywords
+                (Check(Plus, Minus, The, LBracket, A) || // Unary operators / keywords
                  Check(typeof(NumberToken), typeof(StringToken)) // Literals/varrefs
                  )
                )
@@ -294,6 +317,7 @@ public class Ast
         while (!Match(End))
         {
             statements.Add(Statement());
+            Consume(Period, "You missed a period. Mind your punctuation!");
             if (Match(Otherwise))
             {
                 hasElse = true;
@@ -342,6 +366,16 @@ public class Ast
             statements.Add(Statement());
         }
         return new RepeatLoopNode(times, statements);
+    }
+
+    private INode ListGetStmt()
+    {
+        Consume(Item, "You missed a word: 'item'.");
+        Consume(NumberSign, "You missed a '#' (number sign).");
+        var index = Expression();
+        Consume(Of,  "You missed a word: 'of'.");
+        var list = Expression();
+        return new ListGetNode(index, list);
     }
 
     private IExpressionNode Expression()
@@ -554,8 +588,50 @@ public class Ast
             if (!Match(RParen)) throw new Exception("You opened a parenthesis in a math expression, but you forgot to close it.");
             return expression;
         }
+
+        if (Match(A))
+        {
+            Consume(List, "If you wanted to make a list, you forgot the word 'list'.");
+            Consume(Of, "You forgot the word 'of'.");
+            return ListLiteral();
+        }
         
         throw new Exception("I don't understand what you wanted to put here.");
+    }
+
+    private IExpressionNode ListLiteral()
+    {
+        List<IExpressionNode> items = [];
+        while (!Match(And))
+        {
+            items.Add(Expression());
+            Consume(Comma, "You missed a comma between list items.");
+        }
+        items.Add(Expression());
+        return new ListNode(items);
+    }
+}
+
+public class ListGetNode(IExpressionNode index, IExpressionNode list) : INode
+{
+    public IExpressionNode Index = index;
+    public IExpressionNode List = list;
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitListGetNode(this);
+    }
+}
+
+public class ListSetNode(IExpressionNode index, IExpressionNode list, IExpressionNode value) : INode
+{
+    public IExpressionNode Index = index;
+    public IExpressionNode List = list;
+    public IExpressionNode Value = value;
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitListSetNode(this);
     }
 }
 
@@ -592,6 +668,16 @@ public class ValueNode(Value value) : IExpressionNode
     public T Accept<T>(IVisitor<T> visitor)
     {
         return visitor.VisitValueNode(this);
+    }
+}
+
+public class ListNode(List<IExpressionNode> items) : IExpressionNode
+{
+    public List<IExpressionNode> Items = items;
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitListNode(this);
     }
 }
 

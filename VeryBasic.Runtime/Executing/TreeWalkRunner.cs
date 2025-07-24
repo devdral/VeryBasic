@@ -197,4 +197,48 @@ public class TreeWalkRunner : IVisitor<Value>
         }
         return VBNull;
     }
+
+    public Value VisitListNode(ListNode node)
+    {
+        List<Value> values = [];
+        foreach (var elem in node.Items)
+        {
+            values.Add(elem.Accept(this));
+        }
+        return new Value(values);
+    }
+
+    public Value VisitListGetNode(ListGetNode node)
+    {
+        var list = Value.From(node.List.Accept(this), VBType.List).Get<List<Value>>();
+        var indexAsDouble = Value.From(node.Index.Accept(this), VBType.Number).Get<double>();
+        if (indexAsDouble % 1 != 0) throw new Exception("List items are numbered with whole numbers (1, 2, 3, 4...).");
+        int index = (int)indexAsDouble;
+        if (index > list.Count)
+        {
+            throw new Exception("That item number went beyond the end of the list.");
+        } else if (index < 1)
+        {
+            throw new Exception("List item numbers start from one.");
+        }
+        return list[index - 1];
+    }
+
+    public Value VisitListSetNode(ListSetNode node)
+    {
+        var list = Value.From(node.List.Accept(this), VBType.List).Get<List<Value>>();
+        var indexAsDouble = Value.From(node.Index.Accept(this), VBType.Number).Get<double>();
+        if (indexAsDouble % 1 != 0) throw new Exception("List items are numbered with whole numbers (1, 2, 3, 4...).");
+        int index = (int)indexAsDouble;
+        Value value = node.Value.Accept(this);
+        if (index > list.Count)
+        {
+            throw new Exception("That item number went beyond the end of the list.");
+        } else if (index < 1)
+        {
+            throw new Exception("List item numbers start from one.");
+        }
+        list[index] = value;
+        return VBNull;
+    }
 }

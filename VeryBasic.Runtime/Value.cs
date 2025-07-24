@@ -28,15 +28,21 @@ public class Value
         if (type == typeof(double))
         {
             this.Type = VBType.Number;
-        } else if (type == typeof(bool))
+        }
+        else if (type == typeof(bool))
         {
             this.Type = VBType.Boolean;
-        } else if (type == typeof(string))
+        }
+        else if (type == typeof(string))
         {
             this.Type = VBType.String;
-        } else if (type == typeof(Null))
+        }
+        else if (type == typeof(Null))
         {
             this.Type = VBType.Void;
+        }
+        else if (type == typeof(List<Value>)) {
+            this.Type = VBType.List;
         }
         else
         {
@@ -80,5 +86,7 @@ public enum VBType
     Number,
     String,
     Boolean,
+    // NOTE: For now, lists can have variance.
+    List,
     Void
 }
