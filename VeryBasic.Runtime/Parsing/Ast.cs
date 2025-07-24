@@ -9,7 +9,7 @@ public class Ast
     private string _code;
 
     private int _index;
-    
+
     private List<IToken> _tokens = [];
 
     public Ast(string code)
@@ -37,7 +37,8 @@ public class Ast
     private bool Match(params SyntaxTokenType[] matches)
     {
         if (IsAtEnd()) return false;
-        foreach (SyntaxTokenType match in matches) {
+        foreach (SyntaxTokenType match in matches)
+        {
             if (Peek() is SyntaxToken token)
             {
                 if (token.Type == match)
@@ -50,11 +51,12 @@ public class Ast
 
         return false;
     }
-    
+
     private bool Check(params SyntaxTokenType[] matches)
     {
         if (IsAtEnd()) return false;
-        foreach (SyntaxTokenType match in matches) {
+        foreach (SyntaxTokenType match in matches)
+        {
             if (Peek() is SyntaxToken token)
             {
                 if (token.Type == match)
@@ -67,11 +69,12 @@ public class Ast
 
         return false;
     }
-    
+
     private bool Check(int offset, params SyntaxTokenType[] matches)
     {
         if (IsAtEnd()) return false;
-        foreach (SyntaxTokenType match in matches) {
+        foreach (SyntaxTokenType match in matches)
+        {
             if (Peek(offset) is SyntaxToken token)
             {
                 if (token.Type == match)
@@ -92,6 +95,7 @@ public class Ast
             token = null;
             return false;
         }
+
         IToken current = Peek();
         foreach (Type type in matches)
         {
@@ -102,16 +106,18 @@ public class Ast
                 return true;
             }
         }
+
         token = null;
         return false;
     }
-    
+
     private bool Check(params Type[] matches)
     {
         if (IsAtEnd())
         {
             return false;
         }
+
         IToken current = Peek();
         foreach (Type type in matches)
         {
@@ -121,6 +127,7 @@ public class Ast
                 return true;
             }
         }
+
         return false;
     }
 
@@ -138,13 +145,13 @@ public class Ast
     {
         return _tokens[_index];
     }
-    
+
     private IToken? Peek(int offset)
     {
         if (_index + offset >= _tokens.Count) return null;
         return _tokens[_index + offset];
     }
-    
+
     // Node parsers
 
     private List<INode> Program()
@@ -155,6 +162,7 @@ public class Ast
             statements.Add(Statement());
             Consume(Period, "You forgot a period. Mind your punctuation!");
         }
+
         return statements;
     }
 
@@ -170,10 +178,12 @@ public class Ast
                 "boolean" => VBType.Boolean,
                 _ => throw new Exception($"I don't know what a {typeNameS} is.")
             };
-        } else if (Match(List))
+        }
+        else if (Match(List))
         {
             return VBType.List;
         }
+
         throw new Exception("You forgot to put the name of the kind of thing you wanted.");
     }
 
@@ -190,6 +200,7 @@ public class Ast
             {
                 return ListSetStmt();
             }
+
             return VarSet();
         }
 
@@ -217,8 +228,21 @@ public class Ast
         {
             return ListGetStmt();
         }
-        
+
         throw new Exception("I don't understand what you want me to do.");
+    }
+
+    private string VarIdent()
+    {
+        string varName = "";
+        int index = 0;
+        while (Match(out IToken? tok, typeof(IdentToken)))
+        {
+            if (index > 0) varName += " ";
+            varName += ((IdentToken)tok).Name;
+            ++index;
+        }
+        return varName;
     }
 
     private INode ListSetStmt()
@@ -235,24 +259,17 @@ public class Ast
     private INode VarDec()
     {
         Consume(Variable, "You missed a word: 'variable'.");
-        if (
-            Match(out var nameToken, typeof(IdentToken))
-        )
-        {
-            Consume(Comma, "You forgot a comma before your type choice.");
-            Consume(A, "You forgot an 'a' before your type selection.");
-            VBType type = Type();
-            string varName = ((IdentToken)nameToken).Name;
-            return new VarDecNode(type, varName, null);
-        }
-        throw new Exception("You forgot to put the name of variable.");
+        string varName = VarIdent();
+        Consume(Comma, "You forgot a comma before your type choice.");
+        Consume(A, "You forgot an 'a' before your type selection.");
+        VBType type = Type();
+        return new VarDecNode(type, varName, null);
     }
 
     private INode VarSet()
     {
-        if (!Match(out var nameToken, typeof(IdentToken))) throw new Exception("You forgot the variable name.");
+        string varName = VarIdent();
         Consume(To, "You missed a word: 'to'.");
-        string varName = ((IdentToken)nameToken).Name;
         var value = Expression();
         return new VarSetNode(varName, value);
     }
