@@ -43,7 +43,7 @@ public class Environment
 
     public Value? CallProc(string name, List<Value> arguments)
     {
-        if (!_procs.TryGetValue(name, out IProcedure? proc)) throw new Exception($"I don't know how to {name}.");
+        if (!_procs.TryGetValue(name, out IProcedure? proc)) throw new Exception($"I don't know how to '{name}' in that way.");
         if (arguments.Count < proc.ExpectedArguments.Count)
             throw new Exception($"You put too few things for me to have used '{name}'.");
         for (int i = 0; i < arguments.Count; i++)
