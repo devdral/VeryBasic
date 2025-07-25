@@ -263,7 +263,13 @@ public class Parser
         Consume(Comma, "You forgot a comma before your type choice.");
         Consume(A, "You forgot an 'a' before your type selection.");
         VBType type = Type();
-        return new VarDecNode(type, varName, null);
+        IExpressionNode? value = null;
+        if (Match(Comma))
+        {
+            Consume(From, "You forgot a word: 'from'.");
+            value = Expression();
+        }
+        return new VarDecNode(type, varName, value);
     }
 
     private INode VarSet()

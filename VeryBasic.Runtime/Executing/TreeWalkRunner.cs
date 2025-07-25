@@ -114,7 +114,10 @@ public class TreeWalkRunner : IVisitor<Value>
 
     public Value VisitVarDecNode(VarDecNode node)
     {
-        _env.CreateVar(node.Name, node.Type);
+        if (node.Value == null)
+            _env.CreateVar(node.Name, node.Type);
+        else
+            _env.CreateVar(node.Name, node.Type, node.Value.Accept(this));
         return VBNull;
     }
 
