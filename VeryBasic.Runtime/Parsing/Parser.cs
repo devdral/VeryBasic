@@ -4,7 +4,7 @@ using static VeryBasic.Runtime.Parsing.SyntaxTokenType;
 
 namespace VeryBasic.Runtime.Parsing;
 
-public class Ast
+public class Parser
 {
     private string _code;
 
@@ -12,7 +12,7 @@ public class Ast
 
     private List<IToken> _tokens = [];
 
-    public Ast(string code)
+    public Parser(string code)
     {
         _code = code;
     }

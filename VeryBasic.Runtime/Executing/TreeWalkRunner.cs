@@ -15,11 +15,11 @@ public class TreeWalkRunner : IVisitor<Value>
     {
         _env = Environment.Default();
     }
-    public void Run(Ast ast)
+    public void Run(Parser parser)
     {
         try
         {
-            _ast = ast.Parse();
+            _ast = parser.Parse();
         }
         catch (Exception e)
         {
@@ -34,7 +34,7 @@ public class TreeWalkRunner : IVisitor<Value>
             }
             catch (Exception e)
             {
-                throw new RuntimeException(e.Message);
+                throw new RuntimeException(e.Message); 
             }
         }
     }
