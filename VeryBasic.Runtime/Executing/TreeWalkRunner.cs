@@ -1,3 +1,4 @@
+using VeryBasic.Runtime.Executing.Errors;
 using VeryBasic.Runtime.Parsing;
 
 namespace VeryBasic.Runtime.Executing;
@@ -22,11 +23,7 @@ public class TreeWalkRunner : IVisitor<Value>
         }
         catch (Exception e)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("I could not understand your instructions because:");
-            Console.WriteLine(e.Message);
-            Console.ResetColor();
-            return;
+            throw new ParseException(e.Message);
         }
 
         foreach (var node in _ast)
@@ -37,10 +34,7 @@ public class TreeWalkRunner : IVisitor<Value>
             }
             catch (Exception e)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("An issue I see with your instructions:");
-                Console.WriteLine(e.Message);
-                Console.ResetColor();
+                throw new RuntimeException(e.Message);
             }
         }
     }
