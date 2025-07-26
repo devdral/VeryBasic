@@ -11,9 +11,9 @@ public class TreeWalkRunner : IVisitor<Value>
     
     public static readonly Value VBNull = new (new Value.Null());
 
-    public TreeWalkRunner()
+    public TreeWalkRunner(Environment env)
     {
-        _env = Environment.Default();
+        _env = env;
     }
     public void Run(Parser parser)
     {
