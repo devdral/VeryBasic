@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VeryBasic.Runtime", "VeryBasic.Runtime\VeryBasic.Runtime.csproj", "{5531CCB2-6F08-4D13-AD33-A0707AFDA2F5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VeryBasic.Repl", "VeryBasic.Repl\VeryBasic.Repl.csproj", "{9C156C36-5808-46BB-9DAF-7DB90F859AC0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{5531CCB2-6F08-4D13-AD33-A0707AFDA2F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5531CCB2-6F08-4D13-AD33-A0707AFDA2F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5531CCB2-6F08-4D13-AD33-A0707AFDA2F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C156C36-5808-46BB-9DAF-7DB90F859AC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C156C36-5808-46BB-9DAF-7DB90F859AC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C156C36-5808-46BB-9DAF-7DB90F859AC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C156C36-5808-46BB-9DAF-7DB90F859AC0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
