@@ -1,4 +1,6 @@
-﻿using VeryBasic.Runtime.Parsing;
+﻿using VeryBasic.Repl;
+using VeryBasic.Runtime.Parsing;
 using VeryBasic.Runtime.Executing;
 
-Console.WriteLine("Hello World!");
+Repl repl = new Repl();
+repl.Start();
