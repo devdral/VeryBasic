@@ -361,6 +361,7 @@ public class Parser
                 while (!Match(End))
                 {
                     elseStatements.Add(Statement());
+                    Consume(Period, "You missed a period. Mind your punctuation!");
                 }
                 return new IfNode(cond, statements, elseStatements);
             }
