@@ -65,6 +65,8 @@ public class TreeWalkRunner : IVisitor<Value>
         {
             BinOp.Add when left.Type == VBType.Number && right.Type == VBType.Number => new Value(left.Get<double>() +
                 right.Get<double>()),
+            BinOp.Add when left.Type == VBType.String && right.Type == VBType.String => new Value(left.Get<string>() +
+                right.Get<string>()),
             BinOp.Add => throw new Exception("I can't add two things if they aren't both numbers."),
             BinOp.Sub when left.Type == VBType.Number && right.Type == VBType.Number => new Value(left.Get<double>() -
                 right.Get<double>()),
@@ -84,6 +86,7 @@ public class TreeWalkRunner : IVisitor<Value>
             BinOp.Or => throw new Exception(
                 "I can't see when either of two things are true if they aren't both booleans (yes's-or-no's)."),
             BinOp.Equal => new Value(left.Equals(right)),
+            BinOp.NotEqual => new Value(!left.Equals(right)),
             BinOp.LessThan when left.Type == VBType.Number && right.Type == VBType.Number => new Value(
                 left.Get<double>() < right.Get<double>()),
             BinOp.LessThan => throw new Exception(
