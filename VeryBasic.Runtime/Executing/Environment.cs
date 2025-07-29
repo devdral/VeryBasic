@@ -1,5 +1,3 @@
-using VeryBasic.Runtime.Parsing;
-
 namespace VeryBasic.Runtime.Executing;
 
 public class Environment
@@ -9,6 +7,14 @@ public class Environment
         public VBType Type = type;
         public Value? Value = value;
     }
+
+    public Environment(Environment other)
+    {
+        _vars = new Dictionary<string, Variable>(other._vars);
+        _procs = new Dictionary<string, IProcedure>(other._procs);
+    }
+    
+    public Environment() {}
     
     private Dictionary<string, Variable> _vars = new ();
     private Dictionary<string, IProcedure> _procs = new ();

@@ -121,7 +121,7 @@ public class Tokenizer
                     case "item":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Item));
                         break;
-                    case "of":
+                    case "in":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Of));
                         break;
                     case "variable":
@@ -208,6 +208,15 @@ public class Tokenizer
                     case "list":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.List));
                         break;
+                    case "how":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.How));
+                        break;
+                    case "given":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Given));
+                        break;
+                    case "return":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Return));
+                        break;
                     default:
                         _tokens.Add(new IdentToken(token.ToLower()));
                         break;
@@ -293,7 +302,10 @@ public enum SyntaxTokenType
     Get,
     Item,
     Of,
-    NumberSign
+    NumberSign,
+    How,
+    Given,
+    Return,
 }
 
 public class NumberToken(double number) : IToken

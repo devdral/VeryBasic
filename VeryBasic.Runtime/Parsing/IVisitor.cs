@@ -15,5 +15,6 @@ public interface IVisitor<out T>
     public T VisitRepeatLoopNode(RepeatLoopNode node);
     public T VisitListNode(ListNode node);
     public T VisitListGetNode(ListGetNode node);
-    public T VisitListSetNode(ListSetNode listSetNode);
+    public T VisitListSetNode(ListSetNode node);
+    public T VisitProcDefNode(ProcDefNode node);
 }

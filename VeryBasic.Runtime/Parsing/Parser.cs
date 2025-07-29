@@ -229,7 +229,52 @@ public class Parser
             return ListGetStmt();
         }
 
+        if (Match(How))
+        {
+            Consume(To, "You missed the word 'to'.");
+            return ProcDef();
+        }
+
         throw new Exception("I don't understand what you want me to do.");
+    }
+
+    private INode ProcDef()
+    {
+        if (!Match(out var procName, typeof(StringToken)))
+            throw new Exception("You forgot to put the name of what it was you're explaining how to do.");
+        
+        List<VBType> expectedArgs = new List<VBType>();
+        List<string> args = new List<string>();
+        if (Match(Given))
+        {
+            while (Match(out var argName, typeof(IdentToken)))
+            {
+                args.Add(((IdentToken)argName).Name);
+                Consume(Comma, "You forgot a comma before your type choice.");
+                Consume(A, "You forgot a word: 'a'.");
+                expectedArgs.Add(Type());
+                Consume(Comma, "You forgot a comma after your type choice.");
+                if (Match(And)) break;
+            }
+
+            if (Match(out var finalArgName, typeof(IdentToken)))
+            {
+                args.Add(((IdentToken)finalArgName).Name);
+                Consume(Comma, "You forgot a comma before your type choice.");
+                Consume(A, "You forgot a word: 'a'.");
+                expectedArgs.Add(Type());
+            }
+        }
+        
+        VBType returnType = VBType.Void;
+        if (Match(Return)) returnType = Type();
+        List<INode> statements = new List<INode>();
+        while (!(IsAtEnd() || Match(End)))
+        {
+            statements.Add(Statement());
+            Consume(Period, "You missed a period. Mind your punctuation!.");
+        }
+        return new ProcDefNode(((StringToken)procName).String, expectedArgs, args, statements, returnType);
     }
 
     private string VarIdent()
@@ -313,13 +358,11 @@ public class Parser
                  )
                )
             {
-                if (shouldBeOnLast) throw new Exception($"You used the word 'and' before the last thing you gave me when using '{procName}'.");
                 args.Add(Expression());
-                if (index2 > 0)
-                {
-                    Consume(Comma, $"You missed a comma between things you told me when using '{procName}'.");
-                    if (Match(And)) shouldBeOnLast = true;   
-                }
+                if (Check(Period)) break;
+                Consume(Comma, $"You missed a comma between things you told me when using '{procName}'.");
+                if (shouldBeOnLast) throw new Exception($"You used the word 'and' before the last thing you gave me when using '{procName}'.");
+                if (Match(And)) shouldBeOnLast = true;
             }
             else
             {
@@ -633,6 +676,21 @@ public class Parser
         }
         items.Add(Expression());
         return new ListNode(items);
+    }
+}
+
+public class ProcDefNode(string name, List<VBType> expectedArgs, List<string> args, List<INode> body, VBType returnType)
+    : INode
+{
+    public string Name = name;
+    public List<VBType> ExpectedArgs = expectedArgs;
+    public List<string> Args = args;
+    public List<INode> Body = body;
+    public VBType ReturnType = returnType;
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitProcDefNode(this);
     }
 }
 

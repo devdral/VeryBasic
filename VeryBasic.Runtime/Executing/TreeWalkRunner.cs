@@ -39,6 +39,21 @@ public class TreeWalkRunner : IVisitor<Value>
         }
     }
 
+    public void Run(List<INode> stmts)
+    {
+        foreach (var node in stmts)
+        {
+            try
+            {
+                _env.TheResult = node.Accept(this);
+            }
+            catch (Exception e)
+            {
+                throw new RuntimeException(e.Message); 
+            }
+        }
+    }
+
     public Value VisitValueNode(ValueNode node)
     {
         return node.Value;
@@ -239,6 +254,17 @@ public class TreeWalkRunner : IVisitor<Value>
             throw new Exception("List item numbers start from one.");
         }
         list[index] = value;
+        return VBNull;
+    }
+
+    public Value VisitProcDefNode(ProcDefNode node)
+    {
+        _env.CreateProc(node.Name,
+            new UserProcedure(node.Args,
+                node.Body,
+                _env,
+                node.ExpectedArgs,
+                node.ReturnType));
         return VBNull;
     }
 }
