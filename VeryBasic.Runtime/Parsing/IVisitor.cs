@@ -17,4 +17,5 @@ public interface IVisitor<out T>
     public T VisitListGetNode(ListGetNode node);
     public T VisitListSetNode(ListSetNode node);
     public T VisitProcDefNode(ProcDefNode node);
+    public T VisitConvertNode(ConvertNode node);
 }

@@ -267,4 +267,9 @@ public class TreeWalkRunner : IVisitor<Value>
                 node.ReturnType));
         return VBNull;
     }
+
+    public Value VisitConvertNode(ConvertNode node)
+    {
+        return Value.TryConvert(node.Expr.Accept(this), node.Target);
+    }
 }

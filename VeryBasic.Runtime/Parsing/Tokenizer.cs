@@ -217,6 +217,9 @@ public class Tokenizer
                     case "return":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Return));
                         break;
+                    case "convert":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Convert));
+                        break;
                     default:
                         _tokens.Add(new IdentToken(token.ToLower()));
                         break;
@@ -306,6 +309,7 @@ public enum SyntaxTokenType
     How,
     Given,
     Return,
+    Convert
 }
 
 public class NumberToken(double number) : IToken

@@ -235,7 +235,21 @@ public class Parser
             return ProcDef();
         }
 
+        if (Match(SyntaxTokenType.Convert))
+        {
+            return ConvertStmt();
+        }
+
         throw new Exception("I don't understand what you want me to do.");
+    }
+
+    private INode ConvertStmt()
+    {
+        var expr = Expression();
+        Consume(To, "You missed the word 'to'.");
+        Consume(A, "You missed the word 'a'.");
+        var type = Type();
+        return new ConvertNode(expr, type);
     }
 
     private INode ProcDef()
@@ -903,5 +917,16 @@ public class WhileLoopNode : INode
     public T Accept<T>(IVisitor<T> visitor)
     {
         return visitor.VisitWhileLoopNode(this);
+    }
+}
+
+public class ConvertNode(IExpressionNode expr, VBType target) : INode
+{
+    public IExpressionNode Expr = expr;
+    public VBType Target = target;
+
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitConvertNode(this);
     }
 }

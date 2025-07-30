@@ -1,4 +1,5 @@
 using System.Globalization;
+using VeryBasic.Runtime.Executing.Errors;
 using VeryBasic.Runtime.Parsing;
 
 namespace VeryBasic.Runtime;
@@ -76,6 +77,43 @@ public class Value
         }
         
         throw new InvalidCastException($"I can't turn a {other.Type} into a {type}");
+    }
+    
+    public static Value TryConvert(Value other, VBType type)
+    {
+        if (other.Type == type)
+        {
+            return other;
+        }
+        
+        if (other.Type == VBType.String &&
+            type       == VBType.Number)
+        {
+            var valueString = other.Get<string>();
+            try
+            {
+                return new Value(double.Parse(valueString, CultureInfo.CurrentCulture));
+            }
+            catch
+            {
+                throw new RuntimeException("I can't understand {valueString} as a number.");
+            }
+        }
+        
+        if (other.Type == VBType.String &&
+            type == VBType.Boolean)
+        {
+            return new Value(other.Get<string>().ToLower() switch
+            {
+                "yes" => true,
+                "no" => false,
+                "true" => true,
+                "false" => false,
+                _ => throw new RuntimeException("A boolean is a yes-or-no (could also be 'true' or 'false')")
+            });
+        }
+
+        return From(other, type);
     }
     
     public class Null {}
