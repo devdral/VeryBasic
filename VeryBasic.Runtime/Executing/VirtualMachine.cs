@@ -154,6 +154,24 @@ public class VirtualMachine
                 _locals[var] = _stack.Pop();
             }
                 break;
+
+            case OpCode.Invert:
+            {
+                var arg = _stack.Pop();
+                if (arg.Type != VBType.Boolean)
+                    throw new FatalException($"ARG to INV not Boolean.");
+                _stack.Push(new Value(!arg.Get<bool>()));
+            }
+                break;
+
+            case OpCode.Negate:
+            {
+                var arg = _stack.Pop();
+                if (arg.Type != VBType.Number)
+                    throw new FatalException($"ARG to NEG not Number.");
+                _stack.Push(new Value(-arg.Get<double>()));
+            }
+                break;
         }
     }
 

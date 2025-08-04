@@ -44,4 +44,7 @@ public enum OpCode
     
     Load,
     Store,
+    
+    Invert,
+    Negate
 }
