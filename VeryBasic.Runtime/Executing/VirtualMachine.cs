@@ -4,23 +4,23 @@ namespace VeryBasic.Runtime.Executing;
 
 public class VirtualMachine
 {
-    private ByteCode _program;
+    public ByteCode Program { private get; set; }
     private Stack<Value> _stack = new();
     private int _ip;
     private Value[] _locals = new Value[255];
 
     public VirtualMachine(ByteCode program)
     {
-        _program = program;
+        Program = program;
     }
 
     public void Run()
     {
-        while (_ip < _program.Length)
+        while (_ip < Program.Length)
         {
-            OpCode opCode = _program.GetOpCodeAt(_ip);
-            Handle(opCode);
+            OpCode opCode = Program.GetOpCodeAt(_ip);
             ++_ip;
+            Handle(opCode);
         }
     }
 
@@ -177,7 +177,7 @@ public class VirtualMachine
 
     private byte Arg()
     {
-        return _program[_ip++];
+        return Program[_ip++];
     }
 
     private Value LoadValue()
@@ -189,7 +189,7 @@ public class VirtualMachine
         }
         else if (type == VBType.Number)
         {
-            byte[] bytes = [Arg(), Arg(), Arg(), Arg()];
+            byte[] bytes = [Arg(), Arg(), Arg(), Arg(), Arg(), Arg(), Arg(), Arg()];
             try
             {
                 return new Value(BitConverter.ToDouble(bytes, 0));
