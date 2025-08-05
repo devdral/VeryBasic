@@ -7,7 +7,7 @@ namespace VeryBasic.Repl;
 
 public class Repl
 {
-    public TreeWalkRunner Runner { get; private set; } = new TreeWalkRunner(Environment.Default());
+    private VeryBasic.Runtime.Program _runner = new();
 
     public void Start()
     {
@@ -29,10 +29,9 @@ public class Repl
             else
             {
                 program += userCommand;
-                Parser parser = new Parser(program);
                 try
                 {
-                    Runner.Run(parser);
+                    _runner.RunCode(program);
                 }
                 catch (ParseException ex)
                 {
