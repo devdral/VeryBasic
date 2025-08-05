@@ -433,6 +433,7 @@ public class Parser
         while (!Match(End))
         {
             statements.Add(Statement());
+            Consume(Period, "You missed a period. Mind your punctuation!.");
         }
 
         return new WhileLoopNode(cond, statements);
