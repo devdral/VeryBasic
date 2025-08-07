@@ -203,7 +203,7 @@ public class Compiler
                 return VBType.Void;
             }
         }
-        throw new NotImplementedException($"Unknown node type: {node.GetType()}");
+        throw new FatalException($"Unknown node type: {node.GetType()}");
     }
 
     private VBType ProcessBinOp(BinaryOpNode node)
@@ -297,7 +297,7 @@ public class Compiler
                 return VBType.Boolean;
             }
             default:
-                throw new NotImplementedException("Binary operation not implemented.");
+                throw new FatalException("Binary operation not implemented.");
         }
     }
 
@@ -322,6 +322,6 @@ public class Compiler
                 return VBType.Boolean;
             }
         }
-        throw new NotImplementedException("Invalid unary operator.");
+        throw new FatalException("Invalid unary operator.");
     }
 }
