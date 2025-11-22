@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Metadata;
+using VeryBasic.Runtime.Executing.Errors;
 using static VeryBasic.Runtime.Parsing.SyntaxTokenType;
 
 namespace VeryBasic.Runtime.Parsing;
@@ -31,7 +32,7 @@ public class Parser
 
     private void Consume(SyntaxTokenType token, string errorMsg)
     {
-        if (!Match(token)) throw new Exception(errorMsg);
+        if (!Match(token)) throw new ParseException(errorMsg);
     }
 
     private bool Match(params SyntaxTokenType[] matches)
@@ -176,7 +177,7 @@ public class Parser
                 "number" => VBType.Number,
                 "string" => VBType.String,
                 "boolean" => VBType.Boolean,
-                _ => throw new Exception($"I don't know what a {typeNameS} is.")
+                _ => throw new ParseException($"I don't know what a {typeNameS} is.")
             };
         }
         else if (Match(List))
@@ -184,7 +185,7 @@ public class Parser
             return VBType.List;
         }
 
-        throw new Exception("You forgot to put the name of the kind of thing you wanted.");
+        throw new ParseException("You forgot to put the name of the kind of thing you wanted.");
     }
 
     private INode Statement()
@@ -240,7 +241,7 @@ public class Parser
             return ConvertStmt();
         }
 
-        throw new Exception("I don't understand what you want me to do.");
+        throw new ParseException("I don't understand what you want me to do.");
     }
 
     private INode ConvertStmt()
@@ -433,7 +434,7 @@ public class Parser
         while (!Match(End))
         {
             statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!.");
+            Consume(Period, "You missed a period. Mind your punctuation!");
         }
 
         return new WhileLoopNode(cond, statements);
@@ -610,12 +611,13 @@ public class Parser
 
     private IExpressionNode Primary()
     {
-        if (Match(Yes, No))
+        if (Check(Yes, No))
         {
-            bool value = ((SyntaxToken)Peek()).Type switch
+            bool value = ((SyntaxToken)Advance()).Type switch
             {
                 Yes => true,
                 No => false,
+                _ => throw new ParseException("Boolean must be either yes or no")
             };
             return new ValueNode(
                 new Value(
