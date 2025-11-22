@@ -1,3 +1,4 @@
+using System.Net.NetworkInformation;
 using VeryBasic.Runtime.Executing.Errors;
 using VeryBasic.Runtime.Parsing;
 
@@ -5,31 +6,52 @@ namespace VeryBasic.Runtime.Executing;
 
 public class Compiler
 {
-    private List<INode> _ast;
+    private List<INode>? _ast;
     private List<byte> _program = [];
     private Dictionary<string, Variable> _vars = new();
-    private byte _nextVar = 1;
+    private Dictionary<string, Procedure> _procedures = new();
+    private byte _nextVar = 0;
+    private int _scopeLevel = 0;
+    private int _nextProcAddress = 0;
     private VBType _priorResult = VBType.Void;
+    private bool _isProcBody;
     
     private class Variable
     {
         public VBType Type;
         public byte Id;
+        public int Scope;
 
-        public Variable(VBType type, byte id)
+        public Variable(VBType type, byte id, int scope)
         {
             Type = type;
             Id = id;
+            Scope = scope;
         }
     }
 
-    public Compiler(Parser parser)
+    private class Procedure
     {
-        _ast = parser.Parse();
+        public VBType ReturnType;
+        public List<VBType> ParamTypes;
+        public int Address;
+
+        public Procedure(VBType returnType, List<VBType> paramTypes, int address)
+        {
+            ReturnType = returnType;
+            ParamTypes = paramTypes;
+            Address = address;
+        }
     }
 
-    public ByteCode Compile()
+    public ByteCode Compile(Parser parser)
     {
+        _ast = parser.Parse();
+        _program = [];
+        Operation (OpCode.Jump);
+        // Backpatch later
+        _nextProcAddress = 5;
+        IncludeAddress(_nextProcAddress);
         foreach (var node in _ast)
         {
             _priorResult = ProcessNode(node);
@@ -45,11 +67,23 @@ public class Compiler
 
     private void Operation(OpCode op)
     {
+        if (_isProcBody)
+        {
+            _program.Insert(_nextProcAddress, (byte)op);
+            _nextProcAddress++;
+            BackpatchAddress(1, _nextProcAddress);
+        }
         _program.Add((byte)op);
     }
 
     private void Arg(byte arg)
     {
+        if (_isProcBody)
+        {
+            _program.Insert(_nextProcAddress, arg);
+            _nextProcAddress++;
+            BackpatchAddress(1, _nextProcAddress);
+        }
         _program.Add(arg);
     }
 
