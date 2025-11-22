@@ -27,8 +27,8 @@ public class Program
     {
         if (_source is null)
             throw new FatalException("No source provided.");
-        _compiler = new Compiler(_parser);
-        _program = _compiler.Compile();
+        _compiler = new Compiler();
+        _program = _compiler.Compile(_parser);
         _virtualMachine = new VirtualMachine(_program);
     }
 
@@ -43,8 +43,9 @@ public class Program
     {
         _source = code;
         _parser = new Parser(_source);
-        _compiler = new Compiler(_parser);
-        _program = _compiler.Compile();
+        if (_compiler is null)
+            _compiler = new Compiler();
+        _program = _compiler.Compile(_parser);
         // Hot-swap the virtual machine's source
         // without erasing its state.
         _virtualMachine.Program = _program;
