@@ -234,10 +234,6 @@ public class Compiler
                 {
                     _priorResult = ProcessNode(node2);
                 }
-                var loopLength = _program.Count;
-                _program[addrPos] = (byte)(loopLength+2);
-                Operation (OpCode.Jump);
-                Arg       ((byte) returnPos);
                 Operation      (OpCode.Jump); 
                 IncludeAddress (returnPos);
                 var loopEnd = _program.Count;
@@ -245,6 +241,37 @@ public class Compiler
                 LeaveScope();
                 return VBType.Void;
             }
+            case ProcCallNode procCall:
+            {
+                if (!_procedures.TryGetValue(procCall.Name, out var proc))
+                    throw new ParseException($"I don't know how to {procCall.Name}.");
+                var args = procCall.Args;
+                if (args.Count != proc.ParamTypes.Count)
+                    throw new ParseException($"You put too few (or too many) arguments to use '{procCall.Name}'.");
+                for (var i = 0; i < args.Count; i++)
+                {
+                    var arg = ProcessNode(args[i]);
+                    var expectedType = proc.ParamTypes[i];
+                    if (arg != expectedType)
+                        throw new ParseException($"You put a {arg.ToString()}, when you should have put a {expectedType.ToString()}.");
+                }
+                Operation(OpCode.Call);
+                IncludeAddress(proc.Address);
+                return proc.ReturnType;
+            }
+            case ProcDefNode procDef:
+            {
+                if (_procedures.ContainsKey(procDef.Name))
+                    throw new ParseException($"You already told me how to {procDef.Name}.");
+                List<VBType> expectedArgs = [];
+                var address = _program.Count;
+                _isProcBody = true;
+                foreach (var stmt in procDef.Body)
+                {
+                    _priorResult = ProcessNode(stmt);
+                }
+                _isProcBody = false;
+                _procedures[procDef.Name] = new Procedure(procDef.ReturnType, expectedArgs, address);
                 return VBType.Void;
             }
         }
