@@ -6,6 +6,7 @@ public class VirtualMachine
 {
     public ByteCode Program { private get; set; }
     private Stack<Value> _stack = new();
+    private Stack<int> _callStack = new();
     private int _ip;
     private Value[] _locals = new Value[255];
 
@@ -29,13 +30,13 @@ public class VirtualMachine
         switch (opCode)
         {
             case OpCode.Jump:
-                int newIp = Arg();
+                var newIp = LoadAddress();
                 _ip = newIp;
                 break;
             case OpCode.JumpIf:
-                int newIpIf = Arg();
-                Value val = _stack.Pop();
-                bool cond = val.Get<bool>();
+                var newIpIf = LoadAddress();
+                var val = _stack.Pop();
+                var cond = val.Get<bool>();
                 if (cond) _ip = newIpIf;
                 break;
             case OpCode.JumpTo:
@@ -55,7 +56,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to ADD not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to ADD not Number.");
-                _stack.Push(new Value(top.Get<double>() + bottom.Get<double>()));                    
+                _stack.Push(new Value(bottom.Get<double>() + top.Get<double>()));                    
             }
                 break;
             case OpCode.Sub:
@@ -64,7 +65,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to SUB not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to SUB not Number.");
-                _stack.Push(new Value(top.Get<double>() - bottom.Get<double>()));
+                _stack.Push(new Value(bottom.Get<double>() - top.Get<double>()));
             }
                 break;
             case OpCode.Mul:
@@ -73,7 +74,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to MUL not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to MUL not Number.");
-                _stack.Push(new Value(top.Get<double>() * bottom.Get<double>()));
+                _stack.Push(new Value(bottom.Get<double>() * top.Get<double>()));
             }
                 break;
             case OpCode.Div:
@@ -82,7 +83,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to DIV not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to DIV not Number.");
-                _stack.Push(new Value(top.Get<double>() / bottom.Get<double>()));
+                _stack.Push(new Value(bottom.Get<double>() / top.Get<double>()));
             }
                 break;
             
@@ -92,7 +93,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to LESS not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to LESS not Number.");
-                _stack.Push(new Value(top.Get<double>() < bottom.Get<double>()));
+                _stack.Push(new Value(bottom.Get<double>() < top.Get<double>()));
             }
                 break;
             case OpCode.Greater:
@@ -101,7 +102,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to GREATER not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to GREATER not Number.");
-                _stack.Push(new Value(top.Get<double>() > bottom.Get<double>()));
+                _stack.Push(new Value(bottom.Get<double>() > top.Get<double>()));
             }
                 break;
             case OpCode.LessEqual:
@@ -110,7 +111,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to LEQ not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to LEQ not Number.");
-                _stack.Push(new Value(top.Get<double>() <= bottom.Get<double>()));
+                _stack.Push(new Value(bottom.Get<double>() <= top.Get<double>()));
             }
                 break;
             case OpCode.GreaterEqual:
@@ -119,7 +120,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to GEQ not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to GEQ not Number.");
-                _stack.Push(new Value(top.Get<double>() <= bottom.Get<double>()));
+                _stack.Push(new Value(bottom.Get<double>() <= top.Get<double>()));
             }
                 break;
             case OpCode.Equal:
@@ -128,16 +129,14 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to EQUAL not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to GEQ not Number.");
-                _stack.Push(new Value(top.Get<double>() == bottom.Get<double>()));
+                _stack.Push(new Value(bottom.Equals(top)));
             }
                 break;
             case OpCode.NotEqual:
             {
                 var top = _stack.Pop();
-                if (top.Type != VBType.Number) throw new FatalException("A arg to NEQ not Number.");
                 var bottom = _stack.Pop();
-                if (bottom.Type != VBType.Number) throw new FatalException("B arg to NEQ not Number.");
-                _stack.Push(new Value(top.Get<double>() != bottom.Get<double>()));
+                _stack.Push(new Value(!bottom.Equals(top)));
             }
                 break;
 
@@ -152,6 +151,20 @@ public class VirtualMachine
             {
                 byte var = Arg();
                 _locals[var] = _stack.Pop();
+            }
+                break;
+
+            case OpCode.Call:
+            {
+                var address = LoadAddress();
+                _callStack.Push(_ip);
+                _ip = address;
+            }
+                break;
+            case OpCode.Return:
+            {
+                var address = _callStack.Pop();
+                _ip = address;
             }
                 break;
 
@@ -185,7 +198,7 @@ public class VirtualMachine
         VBType type = (VBType)Arg();
         if (type == VBType.Boolean)
         {
-            _stack.Push(new Value(Arg()==1));
+            return new Value(Arg()==1);
         }
         else if (type == VBType.Number)
         {
@@ -224,5 +237,18 @@ public class VirtualMachine
         }
         
         throw new FatalException("Cannot load void!");
+    }
+
+    private int LoadAddress()
+    {
+        byte[] bytes = [Arg(), Arg(), Arg(), Arg()];
+        try
+        {
+            return BitConverter.ToInt32(bytes, 0);
+        }
+        catch
+        {
+            throw new FatalException("Could not decode double!");
+        }
     }
 }

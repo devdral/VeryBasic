@@ -94,6 +94,39 @@ public class Compiler
                 throw new FatalException("Cannot include void!");
         }
     }
+
+    private void IncludeAddress(int newAddress)
+    {
+        var bytes = BitConverter.GetBytes(newAddress);
+        _program.AddRange(bytes);
+    }
+
+    private void BackpatchAddress(int modifiedAddress, int newAddress)
+    {
+        var bytes = BitConverter.GetBytes(newAddress);
+        for (var index = 0; index < bytes.Length; index++)
+        {
+            var @byte = bytes[index];
+            _program[modifiedAddress + index] = @byte;
+        }
+    }
+
+    private void EnterScope()
+    {
+        _scopeLevel++;
+    }
+
+    private void LeaveScope()
+    {
+        _scopeLevel--;
+        foreach (var var in _vars)
+        {
+            if (var.Value.Scope > _scopeLevel)
+            {
+                _vars.Remove(var.Key);
+            }
+        }
+    }
     
     private VBType ProcessNode(INode node)
     {
@@ -102,7 +135,7 @@ public class Compiler
             case VarDecNode dec:
             {
                 var id = NextVar();
-                _vars[dec.Name] = new Variable(dec.Type, id);
+                _vars[dec.Name] = new Variable(dec.Type, id, _scopeLevel);
                 if (dec.Value is not null)
                 {
                     var type = ProcessNode(dec.Value);
@@ -123,8 +156,8 @@ public class Compiler
             }
             case ValueNode val:
             {
-                Operation (OpCode.Push);
-                IncludeValue(val.Value);
+                Operation    (OpCode.Push);
+                IncludeValue (val.Value);
                 return val.Value.Type;
             }
             case BinaryOpNode binOp:
@@ -139,9 +172,7 @@ public class Compiler
             {
                 if (_priorResult == VBType.Void)
                     throw new ParseException("The prior statement didn't result in anything.");
-                // Otherwise, it will be stored in local var 0
-                Operation (OpCode.Load);
-                Arg       (0);
+                // Otherwise, it will be stored on the stack
                 return _priorResult;
             }
             case VarRefNode varRef:
@@ -153,53 +184,67 @@ public class Compiler
             }
             case IfNode ifNode:
             {
+                EnterScope();
                 // For if's with no else's, jump over this branch if the condition is false.
-                var initLength = _program.Count;
+                
+                ProcessNode(ifNode.Condition);
+                Operation (OpCode.Invert);
+                
                 Operation (OpCode.JumpIf);
-                Arg       (0);
+                var firstJumpAddress = _program.Count;
+                IncludeAddress(0);
                 foreach (INode then in ifNode.Then)
                 {
-                    ProcessNode(then);
+                    _priorResult = ProcessNode(then);
                 }
                 var thenLength = _program.Count;
                 if (thenLength > 0)
                 {
-                    _program[initLength+1] = (byte)(thenLength-1);                    
+                    BackpatchAddress(firstJumpAddress, thenLength);                    
                 }
                 if (ifNode.Else is not null)
                 {
                     Operation (OpCode.Jump);
-                    Arg       (0);
+                    IncludeAddress(0);
                     foreach (INode otherwise in ifNode.Else)
                     {
-                        ProcessNode(otherwise);
+                        _priorResult = ProcessNode(otherwise);
                     }
                     var elseLength = _program.Count;
                     if (elseLength > 0)
                     {
-                        _program[thenLength+1] = (byte)(elseLength-1);                    
+                        BackpatchAddress(thenLength + 1, elseLength);
                     }
                 }
+                LeaveScope();
                 return VBType.Void;
             }
             case WhileLoopNode whileNode:
             {
+                EnterScope();
                 var returnPos = _program.Count;
                 ProcessNode(whileNode.Condition);
                 Operation(OpCode.Invert);
                 
                 Operation (OpCode.JumpIf);
                 var addrPos = _program.Count;
-                Arg       (0);
+                IncludeAddress(0);
 
                 foreach (INode node2 in whileNode.Loop)
                 {
-                    ProcessNode(node2);
+                    _priorResult = ProcessNode(node2);
                 }
                 var loopLength = _program.Count;
                 _program[addrPos] = (byte)(loopLength+2);
                 Operation (OpCode.Jump);
                 Arg       ((byte) returnPos);
+                Operation      (OpCode.Jump); 
+                IncludeAddress (returnPos);
+                var loopEnd = _program.Count;
+                BackpatchAddress(addrPos, loopEnd);
+                LeaveScope();
+                return VBType.Void;
+            }
                 return VBType.Void;
             }
         }
