@@ -275,6 +275,39 @@ public class Compiler
                 LeaveScope();
                 return VBType.Void;
             }
+            case RepeatLoopNode repeatLoopNode:
+            {
+                EnterScope();
+                ProcessNode(repeatLoopNode.Times);
+                var threshVar = NextVar();
+                Operation(OpCode.Store);
+                Arg      (threshVar);
+                var iterVar = NextVar();
+                Operation(OpCode.Push);
+                Arg      (iterVar);
+                var returnPos = _program.Count;
+
+                foreach (var stmt in repeatLoopNode.Loop)
+                {
+                    ProcessNode(stmt);
+                }
+                Operation(OpCode.Load);
+                Arg      (iterVar);
+                Operation(OpCode.Push);
+                IncludeValue(new Value(1d));
+                Operation(OpCode.Add);
+                Operation(OpCode.Store);
+                Arg      (iterVar);
+                Operation(OpCode.Load);
+                Arg      (iterVar);
+                Operation(OpCode.Load);
+                Arg      (threshVar);
+                Operation(OpCode.Less);
+                Operation(OpCode.JumpIf);
+                IncludeAddress(returnPos);
+                LeaveScope();
+                return VBType.Void;
+            }
             case ProcCallNode procCall:
             {
                 if (!_procedures.TryGetValue(procCall.Name, out var proc))
