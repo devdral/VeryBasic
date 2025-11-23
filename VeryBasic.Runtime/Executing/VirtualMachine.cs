@@ -5,18 +5,22 @@ namespace VeryBasic.Runtime.Executing;
 public class VirtualMachine
 {
     public ByteCode Program { private get; set; }
+    public ExternTable Externs { get; private set; }
+
     private Stack<Value> _stack = new();
     private Stack<int> _callStack = new();
     private int _ip;
     private Value[] _locals = new Value[255];
 
-    public VirtualMachine(ByteCode program)
+    public VirtualMachine(ByteCode program, ExternTable externs)
     {
         Program = program;
+        Externs = externs;
     }
 
     public void Run()
     {
+        _ip = 0;
         while (_ip < Program.Length)
         {
             OpCode opCode = Program.GetOpCodeAt(_ip);
@@ -42,7 +46,7 @@ public class VirtualMachine
             case OpCode.JumpTo:
                 _ip = _stack.Pop().Get<int>();
                 break;
-            
+
             case OpCode.Push:
                 _stack.Push(LoadValue());
                 break;
@@ -56,7 +60,7 @@ public class VirtualMachine
                 if (top.Type != VBType.Number) throw new FatalException("A arg to ADD not Number.");
                 var bottom = _stack.Pop();
                 if (bottom.Type != VBType.Number) throw new FatalException("B arg to ADD not Number.");
-                _stack.Push(new Value(bottom.Get<double>() + top.Get<double>()));                    
+                _stack.Push(new Value(bottom.Get<double>() + top.Get<double>()));
             }
                 break;
             case OpCode.Sub:
@@ -86,7 +90,7 @@ public class VirtualMachine
                 _stack.Push(new Value(bottom.Get<double>() / top.Get<double>()));
             }
                 break;
-            
+
             case OpCode.Less:
             {
                 var top = _stack.Pop();
@@ -185,6 +189,16 @@ public class VirtualMachine
                 _stack.Push(new Value(-arg.Get<double>()));
             }
                 break;
+
+            case OpCode.CallExtern:
+            {
+                var name = LoadValue().Get<string>();
+                var nativeArgs = new List<Value>();
+                while (_stack.Count > 0) 
+                    nativeArgs.Insert(0, _stack.Pop());
+                CallExtern(name, nativeArgs);
+            }
+                break;
         }
     }
 
@@ -198,7 +212,7 @@ public class VirtualMachine
         VBType type = (VBType)Arg();
         if (type == VBType.Boolean)
         {
-            return new Value(Arg()==1);
+            return new Value(Arg() == 1);
         }
         else if (type == VBType.Number)
         {
@@ -233,9 +247,10 @@ public class VirtualMachine
             {
                 values[i] = LoadValue();
             }
+
             return new Value(values.ToList());
         }
-        
+
         throw new FatalException("Cannot load void!");
     }
 
@@ -251,4 +266,9 @@ public class VirtualMachine
             throw new FatalException("Could not decode double!");
         }
     }
+
+    private void CallExtern(string name, IList<Value> args)
+    {
+        Externs.CallExtern(name, args);
+    } 
 }

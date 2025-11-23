@@ -10,6 +10,7 @@ public class Compiler
     private List<byte> _program = [];
     private Dictionary<string, Variable> _vars = new();
     private Dictionary<string, Procedure> _procedures = new();
+    private Dictionary<string, ExternTable.Signature> _externProcedures = new();
     private byte _nextVar = 0;
     private int _scopeLevel = 0;
     private int _nextProcAddress = 0;
@@ -110,7 +111,7 @@ public class Compiler
                 break;
             case VBType.String:
                 var str = value.Get<string>();
-                Arg(BitConverter.GetBytes(str.Length));
+                Arg(BitConverter.GetBytes((short)str.Length));
                 foreach (char ch in str)
                 {
                     Arg(BitConverter.GetBytes(ch));
@@ -310,9 +311,27 @@ public class Compiler
             }
             case ProcCallNode procCall:
             {
-                if (!_procedures.TryGetValue(procCall.Name, out var proc))
-                    throw new ParseException($"I don't know how to {procCall.Name}.");
                 var args = procCall.Args;
+                if (!_procedures.TryGetValue(procCall.Name, out var proc))
+                {
+                    if (_externProcedures.TryGetValue(procCall.Name, out var externProc))
+                    {
+                        if (args.Count != externProc.Args.Count)
+                            throw new ParseException($"You put too few (or too many) arguments to use '{procCall.Name}'.");
+                        for (var i = 0; i < args.Count; i++)
+                        {
+                            var arg = ProcessNode(args[i]);
+                            var expectedType = externProc.Args[i];
+                            if (arg != expectedType)
+                                throw new ParseException($"You put a {arg.ToString()}, when you should have put a {expectedType.ToString()}.");
+                        }
+                        Operation(OpCode.CallExtern);
+                        IncludeValue(new Value(procCall.Name));
+                        return externProc.ReturnType;
+                    }
+                    else
+                        throw new ParseException($"I don't know how to {procCall.Name}.");
+                }
                 if (args.Count != proc.ParamTypes.Count)
                     throw new ParseException($"You put too few (or too many) arguments to use '{procCall.Name}'.");
                 for (var i = 0; i < args.Count; i++)
@@ -462,5 +481,13 @@ public class Compiler
             }
         }
         throw new FatalException("Invalid unary operator.");
+    }
+
+    public void RegisterExterns(ExternTable table)
+    {
+        foreach (var entry in table.Externs)
+        {
+            _externProcedures[entry.Key] = entry.Value.Signature;
+        }
     }
 }

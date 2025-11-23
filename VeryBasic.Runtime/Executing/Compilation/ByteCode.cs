@@ -70,5 +70,6 @@ public enum OpCode
     Negate,
     
     Call,
-    Return
+    Return,
+    CallExtern
 }

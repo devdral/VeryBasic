@@ -1,13 +1,26 @@
+using VeryBasic.Runtime;
 using VeryBasic.Runtime.Executing;
 using VeryBasic.Runtime.Executing.Errors;
 using VeryBasic.Runtime.Parsing;
-using Environment = VeryBasic.Runtime.Executing.Environment;
 
 namespace VeryBasic.Repl;
 
 public class Repl
 {
-    private VeryBasic.Runtime.Program _runner = new();
+    private VeryBasic.Runtime.Program _runner = new(DefaultEnv());
+
+    private static ExternTable DefaultEnv()
+    {
+        var env = new ExternTable();
+        env.RegisterExtern("print",
+            typeof(Console).AssemblyQualifiedName,
+            nameof(Console.WriteLine),
+            new ExternTable.Signature([
+                    VBType.String
+                ],
+                VBType.Void));
+        return env;
+    }
 
     public void Start()
     {

@@ -447,6 +447,7 @@ public class Parser
         while (!Match(End))
         {
             statements.Add(Statement());
+            Consume(Period, "You missed a period. Mind your punctuation!");
         }
         return new RepeatLoopNode(times, statements);
     }
@@ -881,13 +882,6 @@ public class VarRefNode(string name) : IExpressionNode
         return visitor.VisitVarRefNode(this);
     }
 }
-
-// TODO: Implement these in parser, tree-walker, etc.
-
-// public class CalculateNode : INode
-// {
-//     public IExpressionNode Expr;
-// }
 
 public class RepeatLoopNode : INode
 {

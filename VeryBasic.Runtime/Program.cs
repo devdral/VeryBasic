@@ -1,20 +1,26 @@
 namespace VeryBasic.Runtime;
-using VeryBasic.Runtime.Executing;
-using VeryBasic.Runtime.Executing.Errors;
-using VeryBasic.Runtime.Parsing;
+using Executing;
+using Executing.Errors;
+using Parsing;
 
 public class Program
 {
-    public Program(string source)
+    public Program(string source, ExternTable environment)
     {
         _source = source;
+        _environment = environment;
+        _compiler = new Compiler();
+        _compiler.RegisterExterns(_environment);
         _parser = new Parser(_source);
     }
 
-    public Program()
+    public Program(ExternTable environment)
     {
         _source = null;
-        _virtualMachine = new VirtualMachine(new ByteCode([]));
+        _environment = environment;
+        _compiler = new Compiler();
+        _compiler.RegisterExterns(_environment);
+        _virtualMachine = new VirtualMachine(new ByteCode([]), _environment);
     }
 
     private string? _source;
@@ -22,14 +28,14 @@ public class Program
     private Compiler? _compiler;
     private ByteCode? _program;
     private VirtualMachine? _virtualMachine;
+    private ExternTable _environment;
 
     public void Compile()
     {
         if (_source is null)
             throw new FatalException("No source provided.");
-        _compiler = new Compiler();
         _program = _compiler.Compile(_parser);
-        _virtualMachine = new VirtualMachine(_program);
+        _virtualMachine = new VirtualMachine(_program, _environment);
     }
 
     public void Run()
