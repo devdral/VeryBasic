@@ -12,14 +12,39 @@ public class Repl
     private static ExternTable DefaultEnv()
     {
         var env = new ExternTable();
+        var name = typeof(ExternImpls).AssemblyQualifiedName;
         env.RegisterExtern("print",
-            typeof(Console).AssemblyQualifiedName,
-            nameof(Console.WriteLine),
+            name,
+            nameof(ExternImpls.Print),
             new ExternTable.Signature([
                     VBType.String
                 ],
                 VBType.Void));
+        env.RegisterExtern("ask",
+            name,
+            nameof(ExternImpls.PromptUser),
+            new ExternTable.Signature([
+                    VBType.String
+                ],
+                VBType.String));
         return env;
+    }
+
+    public static class ExternImpls
+    {
+        public static void Print(string msg)
+        {
+            Console.WriteLine(msg);
+        }
+
+        public static string PromptUser(string prompt)
+        {
+            Console.Write(prompt);
+            var response = Console.ReadLine();
+            if (response is null)
+                throw new RuntimeException("I can't seem to take the user's input!");
+            return response;
+        }
     }
 
     public void Start()
