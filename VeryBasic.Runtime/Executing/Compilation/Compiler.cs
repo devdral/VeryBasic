@@ -490,7 +490,7 @@ public class Compiler
             case UnaryOp.Negate:
             {
                 var arg = ProcessNode(node.Expr);
-                if (arg != VBType.Boolean)
+                if (arg != VBType.Number)
                     throw new ParseException($"I can't find the inverse to a {arg.ToString()}; it must be a number.");
                 Operation(OpCode.Negate);
                 return VBType.Boolean;
