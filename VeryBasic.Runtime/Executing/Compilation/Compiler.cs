@@ -181,25 +181,28 @@ public class Compiler
                 if (dec.Value is not null)
                 {
                     var type = ProcessNode(dec.Value);
-                    if (type != dec.Type) throw new ParseException($"A {type.ToString()} is not a {dec.Type.ToString()}.");
-                    Operation (OpCode.Store);
-                    Arg       (id);
+                    if (type != dec.Type)
+                        throw new ParseException($"A {type.ToString()} is not a {dec.Type.ToString()}.");
+                    Operation(OpCode.Store);
+                    Arg(id);
                 }
+
                 return VBType.Void;
             }
             case VarSetNode setVar:
             {
                 var variable = _vars[setVar.Name];
                 var actualType = ProcessNode(setVar.Value);
-                if (variable.Type != actualType) throw new ParseException($"A {actualType.ToString()} is not a {variable.Type.ToString()}.");
-                Operation (OpCode.Store);
-                Arg       (variable.Id);
+                if (variable.Type != actualType)
+                    throw new ParseException($"A {actualType.ToString()} is not a {variable.Type.ToString()}.");
+                Operation(OpCode.Store);
+                Arg(variable.Id);
                 return VBType.Void;
             }
             case ValueNode val:
             {
-                Operation    (OpCode.Push);
-                IncludeValue (val.Value);
+                Operation(OpCode.Push);
+                IncludeValue(val.Value);
                 return val.Value.Type;
             }
             case BinaryOpNode binOp:
@@ -220,44 +223,48 @@ public class Compiler
             case VarRefNode varRef:
             {
                 var var = _vars[varRef.Name];
-                Operation (OpCode.Load);
-                Arg       (var.Id);
+                Operation(OpCode.Load);
+                Arg(var.Id);
                 return var.Type;
             }
             case IfNode ifNode:
             {
                 EnterScope();
                 // For if's with no else's, jump over this branch if the condition is false.
-                
+
                 ProcessNode(ifNode.Condition);
-                Operation (OpCode.Invert);
-                
-                Operation (OpCode.JumpIf);
+                Operation(OpCode.Invert);
+
+                Operation(OpCode.JumpIf);
                 var firstJumpAddress = _program.Count;
                 IncludeAddress(0);
                 foreach (INode then in ifNode.Then)
                 {
                     _priorResult = ProcessNode(then);
                 }
+
                 var thenLength = _program.Count;
                 if (thenLength > 0)
                 {
-                    BackpatchAddress(firstJumpAddress, thenLength);                    
+                    BackpatchAddress(firstJumpAddress, thenLength);
                 }
+
                 if (ifNode.Else is not null)
                 {
-                    Operation (OpCode.Jump);
+                    Operation(OpCode.Jump);
                     IncludeAddress(0);
                     foreach (INode otherwise in ifNode.Else)
                     {
                         _priorResult = ProcessNode(otherwise);
                     }
+
                     var elseLength = _program.Count;
                     if (elseLength > 0)
                     {
                         BackpatchAddress(thenLength + 1, elseLength);
                     }
                 }
+
                 LeaveScope();
                 return VBType.Void;
             }
@@ -267,8 +274,8 @@ public class Compiler
                 var returnPos = _program.Count;
                 ProcessNode(whileNode.Condition);
                 Operation(OpCode.Invert);
-                
-                Operation (OpCode.JumpIf);
+
+                Operation(OpCode.JumpIf);
                 var addrPos = _program.Count;
                 IncludeAddress(0);
 
@@ -276,8 +283,9 @@ public class Compiler
                 {
                     _priorResult = ProcessNode(node2);
                 }
-                Operation      (OpCode.Jump); 
-                IncludeAddress (returnPos);
+
+                Operation(OpCode.Jump);
+                IncludeAddress(returnPos);
                 var loopEnd = _program.Count;
                 BackpatchAddress(addrPos, loopEnd);
                 LeaveScope();
@@ -293,31 +301,32 @@ public class Compiler
                 Operation(OpCode.LessEqual);
                 Operation(OpCode.JumpIf);
                 var skipAddr = ReserveAddress();
-                
+
                 var threshVar = NextVar();
                 Operation(OpCode.Store);
-                Arg      (threshVar);
+                Arg(threshVar);
                 Operation(OpCode.Push);
                 IncludeValue(new Value(0d));
                 var iterVar = NextVar();
                 Operation(OpCode.Store);
-                Arg      (iterVar);
+                Arg(iterVar);
                 var returnPos = _program.Count;
 
                 foreach (var stmt in repeatLoopNode.Loop)
                 {
                     ProcessNode(stmt);
                 }
+
                 Operation(OpCode.Load);
-                Arg      (iterVar);
+                Arg(iterVar);
                 Operation(OpCode.Push);
                 IncludeValue(new Value(1d));
                 Operation(OpCode.Add);
                 Operation(OpCode.Dup);
                 Operation(OpCode.Store);
-                Arg      (iterVar);
+                Arg(iterVar);
                 Operation(OpCode.Load);
-                Arg      (threshVar);
+                Arg(threshVar);
                 Operation(OpCode.Less);
                 Operation(OpCode.JumpIf);
                 IncludeAddress(returnPos);
@@ -333,14 +342,17 @@ public class Compiler
                     if (_externProcedures.TryGetValue(procCall.Name, out var externProc))
                     {
                         if (args.Count != externProc.Args.Count)
-                            throw new ParseException($"You put too few (or too many) arguments to use '{procCall.Name}'.");
+                            throw new ParseException(
+                                $"You put too few (or too many) arguments to use '{procCall.Name}'.");
                         for (var i = 0; i < args.Count; i++)
                         {
                             var arg = ProcessNode(args[i]);
                             var expectedType = externProc.Args[i];
                             if (arg != expectedType)
-                                throw new ParseException($"You put a {arg.ToString()}, when you should have put a {expectedType.ToString()}.");
+                                throw new ParseException(
+                                    $"You put a {arg.ToString()}, when you should have put a {expectedType.ToString()}.");
                         }
+
                         Operation(OpCode.CallExtern);
                         IncludeValue(new Value(procCall.Name));
                         return externProc.ReturnType;
@@ -348,6 +360,7 @@ public class Compiler
                     else
                         throw new ParseException($"I don't know how to {procCall.Name}.");
                 }
+
                 if (args.Count != proc.ParamTypes.Count)
                     throw new ParseException($"You put too few (or too many) arguments to use '{procCall.Name}'.");
                 for (var i = 0; i < args.Count; i++)
@@ -355,8 +368,10 @@ public class Compiler
                     var arg = ProcessNode(args[i]);
                     var expectedType = proc.ParamTypes[i];
                     if (arg != expectedType)
-                        throw new ParseException($"You put a {arg.ToString()}, when you should have put a {expectedType.ToString()}.");
+                        throw new ParseException(
+                            $"You put a {arg.ToString()}, when you should have put a {expectedType.ToString()}.");
                 }
+
                 Operation(OpCode.Call);
                 IncludeAddress(proc.Address);
                 return proc.ReturnType;
@@ -372,11 +387,31 @@ public class Compiler
                 {
                     _priorResult = ProcessNode(stmt);
                 }
+
                 _isProcBody = false;
                 _procedures[procDef.Name] = new Procedure(procDef.ReturnType, expectedArgs, address);
                 return VBType.Void;
             }
-        }
+            case ConvertNode conversion:
+            {
+                var target = conversion.Target;
+                var source = ProcessNode(conversion.Expr);
+                var isValid = source == target ||
+                              (source == VBType.Number &&
+                               target == VBType.String) ||
+                              (source == VBType.Boolean &&
+                               target == VBType.String) ||
+                              (source == VBType.String &&
+                               target == VBType.Number) ||
+                              (source == VBType.String &&
+                               target == VBType.Boolean);
+                if (!isValid)
+                    throw new ParseException($"I can't turn a {source} into a {target}.");
+                Operation(OpCode.Convert);
+                IncludeType(target);
+                return conversion.Target;
+            }
+    }
         throw new FatalException($"Unknown node type: {node.GetType()}");
     }
 
@@ -497,6 +532,11 @@ public class Compiler
             }
         }
         throw new FatalException("Invalid unary operator.");
+    }
+
+    private void IncludeType(VBType type)
+    {
+        Arg((byte)type);
     }
 
     public void RegisterExterns(ExternTable table)

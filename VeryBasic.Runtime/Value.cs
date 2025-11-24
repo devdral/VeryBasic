@@ -93,7 +93,7 @@ public class Value
             });
         }
         
-        throw new InvalidCastException($"I can't turn a {other.Type} into a {type}");
+        throw new RuntimeException($"I can't turn a {other.Type} into a {type}.");
     }
     
     public static Value TryConvert(Value other, VBType type)
@@ -113,7 +113,7 @@ public class Value
             }
             catch
             {
-                throw new RuntimeException("I can't understand {valueString} as a number.");
+                throw new RuntimeException($"I can't understand {valueString} as a number.");
             }
         }
         

@@ -204,6 +204,13 @@ public class VirtualMachine
                     _stack.Push(ret);
             }
                 break;
+
+            case OpCode.Convert:
+            {
+                var finalType = LoadType();
+                _stack.Push(Value.TryConvert(_stack.Pop(), finalType));
+            }
+                break;
         }
     }
 
@@ -270,6 +277,12 @@ public class VirtualMachine
         {
             throw new FatalException("Could not decode double!");
         }
+    }
+
+    private VBType LoadType()
+    {
+        var by = Arg();
+        return (VBType)by;
     }
 
     private Value CallExtern(string name, IList<Value> args)

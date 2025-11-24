@@ -70,6 +70,8 @@ public enum OpCode
     Invert,
     Negate,
     
+    Convert,
+    
     Call,
     Return,
     CallExtern
