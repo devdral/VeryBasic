@@ -443,6 +443,7 @@ public class Parser
     private INode RepeatLoop()
     {
         IExpressionNode times = Expression();
+        Consume(Times, "You missed a word: 'times'.");
         List<INode> statements = new List<INode>();
         while (!Match(End))
         {
