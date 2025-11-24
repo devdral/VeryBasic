@@ -20,7 +20,7 @@ public class ExternTable
     {
         _externs[nativeName] = new ExternProcedure(typeName, methodName, signature);
     }
-
+    
     internal Value CallExtern(string name, IList<Value> args)
     {
         var externalArgs = new object[args.Count];

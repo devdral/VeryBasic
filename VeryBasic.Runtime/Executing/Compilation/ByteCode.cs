@@ -50,6 +50,7 @@ public enum OpCode
     
     Push,
     Pop,
+    Dup,
     
     Add,
     Sub,

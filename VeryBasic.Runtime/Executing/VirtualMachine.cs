@@ -53,6 +53,9 @@ public class VirtualMachine
             case OpCode.Pop:
                 _stack.Pop();
                 break;
+            case OpCode.Dup:
+                _stack.Push(_stack.Peek().Copy());
+                break;
 
             case OpCode.Add:
             {
@@ -196,7 +199,9 @@ public class VirtualMachine
                 var nativeArgs = new List<Value>();
                 while (_stack.Count > 0) 
                     nativeArgs.Insert(0, _stack.Pop());
-                CallExtern(name, nativeArgs);
+                var ret = CallExtern(name, nativeArgs);
+                if (ret.Type is not VBType.Void)
+                    _stack.Push(ret);
             }
                 break;
         }
@@ -267,8 +272,8 @@ public class VirtualMachine
         }
     }
 
-    private void CallExtern(string name, IList<Value> args)
+    private Value CallExtern(string name, IList<Value> args)
     {
-        Externs.CallExtern(name, args);
+        return Externs.CallExtern(name, args);
     } 
 }

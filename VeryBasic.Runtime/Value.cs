@@ -53,6 +53,23 @@ public class Value
         _value = value;
     }
 
+    public Value Copy()
+    {
+        if (Type is VBType.List)
+        {
+            var oldList = (List<Value>)_value;
+            var newList = new List<Value>(oldList.Count);
+            foreach (var val in oldList)
+            {
+                newList.Add(val);
+            }
+
+            return new Value(newList);
+        }
+
+        return new Value(_value);
+    }
+
     public static Value From(Value other, VBType type)
     {
         if (other.Type == type)

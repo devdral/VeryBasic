@@ -146,6 +146,13 @@ public class Compiler
         }
     }
 
+    private int ReserveAddress()
+    {
+        var pos = _program.Count;
+        IncludeAddress(0);
+        return pos;
+    }
+
     private void EnterScope()
     {
         _scopeLevel++;
@@ -280,11 +287,20 @@ public class Compiler
             {
                 EnterScope();
                 ProcessNode(repeatLoopNode.Times);
+                Operation(OpCode.Dup);
+                Operation(OpCode.Push);
+                IncludeValue(new Value(0d));
+                Operation(OpCode.LessEqual);
+                Operation(OpCode.JumpIf);
+                var skipAddr = ReserveAddress();
+                
                 var threshVar = NextVar();
                 Operation(OpCode.Store);
                 Arg      (threshVar);
-                var iterVar = NextVar();
                 Operation(OpCode.Push);
+                IncludeValue(new Value(0d));
+                var iterVar = NextVar();
+                Operation(OpCode.Store);
                 Arg      (iterVar);
                 var returnPos = _program.Count;
 
@@ -297,15 +313,15 @@ public class Compiler
                 Operation(OpCode.Push);
                 IncludeValue(new Value(1d));
                 Operation(OpCode.Add);
+                Operation(OpCode.Dup);
                 Operation(OpCode.Store);
-                Arg      (iterVar);
-                Operation(OpCode.Load);
                 Arg      (iterVar);
                 Operation(OpCode.Load);
                 Arg      (threshVar);
                 Operation(OpCode.Less);
                 Operation(OpCode.JumpIf);
                 IncludeAddress(returnPos);
+                BackpatchAddress(skipAddr, _program.Count);
                 LeaveScope();
                 return VBType.Void;
             }
