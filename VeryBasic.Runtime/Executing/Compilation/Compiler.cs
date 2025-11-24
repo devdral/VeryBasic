@@ -9,6 +9,7 @@ public class Compiler
     private List<INode>? _ast;
     private List<byte> _program = [];
     private Dictionary<string, Variable> _vars = new();
+    private Dictionary<string, Param> _params = new();
     private Dictionary<string, Procedure> _procedures = new();
     private Dictionary<string, ExternTable.Signature> _externProcedures = new();
     private byte _nextVar = 0;
@@ -45,6 +46,18 @@ public class Compiler
         }
     }
 
+    private class Param
+    {
+        public VBType Type;
+        public int Pos;
+
+        public Param(VBType type, int pos)
+        {
+            Type = type;
+            Pos = pos;
+        }
+    }
+    
     public ByteCode Compile(Parser parser)
     {
         _ast = parser.Parse();
@@ -380,7 +393,14 @@ public class Compiler
             {
                 if (_procedures.ContainsKey(procDef.Name))
                     throw new ParseException($"You already told me how to {procDef.Name}.");
-                List<VBType> expectedArgs = [];
+                var expectedArgs = procDef.ExpectedArgs;
+                for (var index = 0; index < expectedArgs.Count; index++)
+                {
+                    var arg = expectedArgs[index];
+                    var name = procDef.Args[index];
+                    _params[name] = new Param(arg, index);
+                }
+
                 var address = _program.Count;
                 _isProcBody = true;
                 foreach (var stmt in procDef.Body)
