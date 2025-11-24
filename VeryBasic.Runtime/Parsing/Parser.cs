@@ -268,11 +268,11 @@ public class Parser
                 Consume(Comma, "You forgot a comma before your type choice.");
                 Consume(A, "You forgot a word: 'a'.");
                 expectedArgs.Add(Type());
-                Consume(Comma, "You forgot a comma after your type choice.");
+                 if (!Match(Comma)) break;
                 if (Match(And)) break;
             }
-
-            if (Match(out var finalArgName, typeof(IdentToken)))
+            
+            if (!Match(Period) && Match(out var finalArgName, typeof(IdentToken)))
             {
                 args.Add(((IdentToken)finalArgName).Name);
                 Consume(Comma, "You forgot a comma before your type choice.");
