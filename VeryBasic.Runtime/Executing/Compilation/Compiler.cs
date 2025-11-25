@@ -9,14 +9,14 @@ public class Compiler
     private List<INode>? _ast;
     private List<byte> _program = [];
     private Dictionary<string, Variable> _vars = new();
-    private Dictionary<string, Param> _params = new();
     private Dictionary<string, Procedure> _procedures = new();
     private Dictionary<string, ExternTable.Signature> _externProcedures = new();
     private byte _nextVar = 0;
+    private Queue<byte> _freedVars = [];
     private int _scopeLevel = 0;
     private int _nextProcAddress = 0;
     private VBType _priorResult = VBType.Void;
-    private bool _isProcBody;
+    private string? _currentProc;
     
     private class Variable
     {
@@ -37,6 +37,7 @@ public class Compiler
         public VBType ReturnType;
         public List<VBType> ParamTypes;
         public int Address;
+        public Dictionary<string, Param> Params = new();
 
         public Procedure(VBType returnType, List<VBType> paramTypes, int address)
         {
@@ -50,11 +51,13 @@ public class Compiler
     {
         public VBType Type;
         public int Pos;
+        public byte Cell;
 
-        public Param(VBType type, int pos)
+        public Param(VBType type, int pos, byte cell)
         {
             Type = type;
             Pos = pos;
+            Cell = cell;
         }
     }
     
@@ -76,12 +79,16 @@ public class Compiler
 
     private byte NextVar()
     {
+        if (_freedVars.Count > 0)
+        {
+            return _freedVars.Dequeue();
+        }
         return _nextVar++;
     }
 
     private void Operation(OpCode op)
     {
-        if (_isProcBody)
+        if (_currentProc is not null)
         {
             _program.Insert(_nextProcAddress, (byte)op);
             _nextProcAddress++;
@@ -92,7 +99,7 @@ public class Compiler
 
     private void Arg(byte arg)
     {
-        if (_isProcBody)
+        if (_currentProc is not null)
         {
             _program.Insert(_nextProcAddress, arg);
             _nextProcAddress++;
@@ -179,6 +186,7 @@ public class Compiler
             if (var.Value.Scope > _scopeLevel)
             {
                 _vars.Remove(var.Key);
+                _freedVars.Enqueue(var.Value.Id);
             }
         }
     }
@@ -235,10 +243,23 @@ public class Compiler
             }
             case VarRefNode varRef:
             {
-                var var = _vars[varRef.Name];
-                Operation(OpCode.Load);
-                Arg(var.Id);
-                return var.Type;
+                if (_currentProc is not null && _procedures[_currentProc].Params.TryGetValue(varRef.Name, out var param))
+                {
+                    Operation(OpCode.Load);
+                    Arg      (param.Cell);
+                    return param.Type;
+                }
+                else
+                {
+                    if (_vars.TryGetValue(varRef.Name, out var var))
+                    {
+                        Operation(OpCode.Load);
+                        Arg(var.Id);
+                        return var.Type;
+                    }
+
+                    throw new ParseException($"You never said what '{varRef.Name}' was.");
+                }
             }
             case IfNode ifNode:
             {
@@ -394,22 +415,35 @@ public class Compiler
                 if (_procedures.ContainsKey(procDef.Name))
                     throw new ParseException($"You already told me how to {procDef.Name}.");
                 var expectedArgs = procDef.ExpectedArgs;
+                var address = _program.Count;
+                var proc = new Procedure(procDef.ReturnType, expectedArgs, address);
+                var cells = new List<byte>();
                 for (var index = 0; index < expectedArgs.Count; index++)
                 {
                     var arg = expectedArgs[index];
                     var name = procDef.Args[index];
-                    _params[name] = new Param(arg, index);
+                    var id = NextVar();
+                    proc.Params[name] = new Param(arg, index, id);
+                    cells.Add(id);
                 }
 
-                var address = _program.Count;
-                _isProcBody = true;
+                for (var index = cells.Count-1; index > 0; index--)
+                {
+                    var cell = cells[index];
+                    Operation(OpCode.Store);
+                    Arg      (cell);
+                }
+
+                _procedures[procDef.Name] = proc;
+                
+                _currentProc = procDef.Name;
+                
                 foreach (var stmt in procDef.Body)
                 {
                     _priorResult = ProcessNode(stmt);
                 }
 
-                _isProcBody = false;
-                _procedures[procDef.Name] = new Procedure(procDef.ReturnType, expectedArgs, address);
+                _currentProc = null;
                 return VBType.Void;
             }
             case ConvertNode conversion:
