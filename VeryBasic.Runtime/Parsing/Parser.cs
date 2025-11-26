@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Metadata;
+using VeryBasic.Runtime.Executing.Errors;
 using static VeryBasic.Runtime.Parsing.SyntaxTokenType;
 
 namespace VeryBasic.Runtime.Parsing;
@@ -31,7 +32,7 @@ public class Parser
 
     private void Consume(SyntaxTokenType token, string errorMsg)
     {
-        if (!Match(token)) throw new Exception(errorMsg);
+        if (!Match(token)) throw new ParseException(errorMsg);
     }
 
     private bool Match(params SyntaxTokenType[] matches)
@@ -176,7 +177,7 @@ public class Parser
                 "number" => VBType.Number,
                 "string" => VBType.String,
                 "boolean" => VBType.Boolean,
-                _ => throw new Exception($"I don't know what a {typeNameS} is.")
+                _ => throw new ParseException($"I don't know what a {typeNameS} is.")
             };
         }
         else if (Match(List))
@@ -184,7 +185,7 @@ public class Parser
             return VBType.List;
         }
 
-        throw new Exception("You forgot to put the name of the kind of thing you wanted.");
+        throw new ParseException("You forgot to put the name of the kind of thing you wanted.");
     }
 
     private INode Statement()
@@ -240,7 +241,13 @@ public class Parser
             return ConvertStmt();
         }
 
-        throw new Exception("I don't understand what you want me to do.");
+        if (Match(Return))
+        {
+            var expr = Expression();
+            return new ReturnNode(expr);
+        }
+
+        throw new ParseException("I don't understand what you want me to do.");
     }
 
     private INode ConvertStmt()
@@ -267,11 +274,11 @@ public class Parser
                 Consume(Comma, "You forgot a comma before your type choice.");
                 Consume(A, "You forgot a word: 'a'.");
                 expectedArgs.Add(Type());
-                Consume(Comma, "You forgot a comma after your type choice.");
+                 if (!Match(Comma)) break;
                 if (Match(And)) break;
             }
-
-            if (Match(out var finalArgName, typeof(IdentToken)))
+            
+            if (!Match(Period) && Match(out var finalArgName, typeof(IdentToken)))
             {
                 args.Add(((IdentToken)finalArgName).Name);
                 Consume(Comma, "You forgot a comma before your type choice.");
@@ -433,6 +440,7 @@ public class Parser
         while (!Match(End))
         {
             statements.Add(Statement());
+            Consume(Period, "You missed a period. Mind your punctuation!");
         }
 
         return new WhileLoopNode(cond, statements);
@@ -441,10 +449,12 @@ public class Parser
     private INode RepeatLoop()
     {
         IExpressionNode times = Expression();
+        Consume(Times, "You missed a word: 'times'.");
         List<INode> statements = new List<INode>();
         while (!Match(End))
         {
             statements.Add(Statement());
+            Consume(Period, "You missed a period. Mind your punctuation!");
         }
         return new RepeatLoopNode(times, statements);
     }
@@ -609,12 +619,13 @@ public class Parser
 
     private IExpressionNode Primary()
     {
-        if (Match(Yes, No))
+        if (Check(Yes, No))
         {
-            bool value = ((SyntaxToken)Peek()).Type switch
+            bool value = ((SyntaxToken)Advance()).Type switch
             {
                 Yes => true,
                 No => false,
+                _ => throw new ParseException("Boolean must be either yes or no")
             };
             return new ValueNode(
                 new Value(
@@ -879,13 +890,6 @@ public class VarRefNode(string name) : IExpressionNode
     }
 }
 
-// TODO: Implement these in parser, tree-walker, etc.
-
-// public class CalculateNode : INode
-// {
-//     public IExpressionNode Expr;
-// }
-
 public class RepeatLoopNode : INode
 {
     public IExpressionNode Times;
@@ -928,5 +932,14 @@ public class ConvertNode(IExpressionNode expr, VBType target) : INode
     public T Accept<T>(IVisitor<T> visitor)
     {
         return visitor.VisitConvertNode(this);
+    }
+}
+
+public class ReturnNode(IExpressionNode value) : INode
+{
+    public IExpressionNode Value = value;
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitReturnNode(this);
     }
 }

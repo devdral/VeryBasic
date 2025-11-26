@@ -53,6 +53,23 @@ public class Value
         _value = value;
     }
 
+    public Value Copy()
+    {
+        if (Type is VBType.List)
+        {
+            var oldList = (List<Value>)_value;
+            var newList = new List<Value>(oldList.Count);
+            foreach (var val in oldList)
+            {
+                newList.Add(val);
+            }
+
+            return new Value(newList);
+        }
+
+        return new Value(_value);
+    }
+
     public static Value From(Value other, VBType type)
     {
         if (other.Type == type)
@@ -76,7 +93,7 @@ public class Value
             });
         }
         
-        throw new InvalidCastException($"I can't turn a {other.Type} into a {type}");
+        throw new RuntimeException($"I can't turn a {other.Type} into a {type}.");
     }
     
     public static Value TryConvert(Value other, VBType type)
@@ -96,7 +113,7 @@ public class Value
             }
             catch
             {
-                throw new RuntimeException("I can't understand {valueString} as a number.");
+                throw new RuntimeException($"I can't understand {valueString} as a number.");
             }
         }
         

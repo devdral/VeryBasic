@@ -1,13 +1,51 @@
+using VeryBasic.Runtime;
 using VeryBasic.Runtime.Executing;
 using VeryBasic.Runtime.Executing.Errors;
 using VeryBasic.Runtime.Parsing;
-using Environment = VeryBasic.Runtime.Executing.Environment;
 
 namespace VeryBasic.Repl;
 
 public class Repl
 {
-    public TreeWalkRunner Runner { get; private set; } = new TreeWalkRunner(Environment.Default());
+    private VeryBasic.Runtime.Program _runner = new(DefaultEnv());
+
+    private static ExternTable DefaultEnv()
+    {
+        var env = new ExternTable();
+        var name = typeof(ExternImpls).AssemblyQualifiedName;
+        env.RegisterExtern("print",
+            name,
+            nameof(ExternImpls.Print),
+            new ExternTable.Signature([
+                    VBType.String
+                ],
+                VBType.Void));
+        env.RegisterExtern("ask",
+            name,
+            nameof(ExternImpls.PromptUser),
+            new ExternTable.Signature([
+                    VBType.String
+                ],
+                VBType.String));
+        return env;
+    }
+
+    public static class ExternImpls
+    {
+        public static void Print(string msg)
+        {
+            Console.WriteLine(msg);
+        }
+
+        public static string PromptUser(string prompt)
+        {
+            Console.Write(prompt);
+            var response = Console.ReadLine();
+            if (response is null)
+                throw new RuntimeException("I can't seem to take the user's input!");
+            return response;
+        }
+    }
 
     public void Start()
     {
@@ -29,10 +67,9 @@ public class Repl
             else
             {
                 program += userCommand;
-                Parser parser = new Parser(program);
                 try
                 {
-                    Runner.Run(parser);
+                    _runner.RunCode(program);
                 }
                 catch (ParseException ex)
                 {
