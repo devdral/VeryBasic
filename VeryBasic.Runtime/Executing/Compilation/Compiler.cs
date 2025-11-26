@@ -17,6 +17,7 @@ public class Compiler
     private int _nextProcAddress = 0;
     private VBType _priorResult = VBType.Void;
     private string? _currentProc;
+    private bool _returned;
     
     private class Variable
     {
@@ -79,9 +80,9 @@ public class Compiler
 
     private byte NextVar()
     {
-        if (_freedVars.Count > 0)
+        if (_freedVars.TryDequeue(out var reused))
         {
-            return _freedVars.Dequeue();
+            return reused;
         }
         return _nextVar++;
     }
@@ -90,29 +91,37 @@ public class Compiler
     {
         if (_currentProc is not null)
         {
-            _program.Insert(_nextProcAddress, (byte)op);
+            if (_nextProcAddress > _program.Count)
+                _program.Add((byte)op);
+            else
+                _program.Insert(_nextProcAddress, (byte)op);
             _nextProcAddress++;
             BackpatchAddress(1, _nextProcAddress);
         }
-        _program.Add((byte)op);
+        else
+            _program.Add((byte)op);
     }
 
     private void Arg(byte arg)
     {
         if (_currentProc is not null)
         {
-            _program.Insert(_nextProcAddress, arg);
+            if (_nextProcAddress > _program.Count)
+                _program.Add(arg);
+            else
+                _program.Insert(_nextProcAddress, arg);
             _nextProcAddress++;
             BackpatchAddress(1, _nextProcAddress);
         }
-        _program.Add(arg);
+        else
+            _program.Add(arg);
     }
 
     private void Arg(byte[] args)
     {
         foreach (var arg in args)
         {
-            _program.Add(arg);
+            Arg(arg);
         }
     }
 
@@ -251,14 +260,12 @@ public class Compiler
                 }
                 else
                 {
-                    if (_vars.TryGetValue(varRef.Name, out var var))
-                    {
-                        Operation(OpCode.Load);
-                        Arg(var.Id);
-                        return var.Type;
-                    }
+                    if (!_vars.TryGetValue(varRef.Name, out var var))
+                        throw new ParseException($"You never said what '{varRef.Name}' was.");
+                    Operation(OpCode.Load);
+                    Arg(var.Id);
+                    return var.Type;
 
-                    throw new ParseException($"You never said what '{varRef.Name}' was.");
                 }
             }
             case IfNode ifNode:
@@ -426,22 +433,24 @@ public class Compiler
                     proc.Params[name] = new Param(arg, index, id);
                     cells.Add(id);
                 }
+                
+                _procedures[procDef.Name] = proc;
+                _currentProc = procDef.Name;
 
-                for (var index = cells.Count-1; index > 0; index--)
+                for (var index = cells.Count-1; index >= 0; index--)
                 {
                     var cell = cells[index];
                     Operation(OpCode.Store);
                     Arg      (cell);
                 }
 
-                _procedures[procDef.Name] = proc;
-                
-                _currentProc = procDef.Name;
-                
+                _returned = false;
                 foreach (var stmt in procDef.Body)
                 {
                     _priorResult = ProcessNode(stmt);
                 }
+                if (!_returned)
+                    Operation(OpCode.Return);
 
                 _currentProc = null;
                 return VBType.Void;
@@ -464,6 +473,15 @@ public class Compiler
                 Operation(OpCode.Convert);
                 IncludeType(target);
                 return conversion.Target;
+            }
+            case ReturnNode returnNode:
+            {
+                if (_currentProc is null)
+                    throw new ParseException("I can't return something when I wasn't told to follow a recipe in the first place.");
+                _returned = true;
+                var type = ProcessNode(returnNode.Value);
+                Operation(OpCode.Return);
+                return type;
             }
     }
         throw new FatalException($"Unknown node type: {node.GetType()}");

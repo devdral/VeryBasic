@@ -241,6 +241,12 @@ public class Parser
             return ConvertStmt();
         }
 
+        if (Match(Return))
+        {
+            var expr = Expression();
+            return new ReturnNode(expr);
+        }
+
         throw new ParseException("I don't understand what you want me to do.");
     }
 
@@ -926,5 +932,14 @@ public class ConvertNode(IExpressionNode expr, VBType target) : INode
     public T Accept<T>(IVisitor<T> visitor)
     {
         return visitor.VisitConvertNode(this);
+    }
+}
+
+public class ReturnNode(IExpressionNode value) : INode
+{
+    public IExpressionNode Value = value;
+    public T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.VisitReturnNode(this);
     }
 }
