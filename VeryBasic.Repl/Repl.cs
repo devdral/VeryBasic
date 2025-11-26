@@ -9,7 +9,7 @@ public class Repl
 {
     private VeryBasic.Runtime.Program _runner = new(DefaultEnv());
 
-    private static ExternTable DefaultEnv()
+    public static ExternTable DefaultEnv()
     {
         var env = new ExternTable();
         var name = typeof(ExternImpls).AssemblyQualifiedName;
