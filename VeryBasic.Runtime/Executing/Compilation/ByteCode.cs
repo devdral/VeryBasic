@@ -66,6 +66,7 @@ public enum OpCode
     
     Load,
     Store,
+    Free,
     
     Invert,
     Negate,

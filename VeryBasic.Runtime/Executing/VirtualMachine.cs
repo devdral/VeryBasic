@@ -211,6 +211,13 @@ public class VirtualMachine
                 _stack.Push(Value.TryConvert(_stack.Pop(), finalType));
             }
                 break;
+
+            case OpCode.Free:
+            {
+                var var = Arg();
+                _locals[var] = null;
+            }
+                break;
         }
     }
 

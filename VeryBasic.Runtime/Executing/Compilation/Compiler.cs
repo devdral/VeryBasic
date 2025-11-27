@@ -196,6 +196,8 @@ public class Compiler
             {
                 _vars.Remove(var.Key);
                 _freedVars.Enqueue(var.Value.Id);
+                Operation(OpCode.Free);
+                Arg      (var.Value.Id);
             }
         }
     }
