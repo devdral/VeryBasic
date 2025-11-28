@@ -210,6 +210,11 @@ public class Parser
         {
             return WhileLoop();
         }
+
+        if (Match(Repeat))
+        {
+            return RepeatLoop();
+        }
     }
 
     private VarDecNode VarDec()
@@ -284,7 +289,20 @@ public class Parser
         return new WhileLoopNode(cond, stmts);
     }
 
-private IExpressionNode Expression()
+    private RepeatLoopNode RepeatLoop()
+    {
+        var times = Expression();
+        Consume(Times, "You missed a word: 'times'.");
+        var stmts = new List<INode>();
+        while (!Match(End))
+        {
+            stmts.Add(Statement());
+        }
+
+        return new RepeatLoopNode(times, stmts);
+    }
+
+    private IExpressionNode Expression()
     {
         return Term();
     }
