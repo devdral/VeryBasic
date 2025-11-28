@@ -196,56 +196,16 @@ public class Parser
 
     private INode Statement()
     {
-        if (Match(Declare))
+        if (Match(Save))
         {
             return VarDec();
-        }
-
-        if (Match(Update))
-        {
-            if (Match(Item))
-            {
-                return ListSetStmt();
-            }
-
-            return VarSet();
-        }
-
-        if (Check(typeof(IdentToken)))
-        {
-            return ProcCall();
         }
 
         if (Match(If))
         {
             return IfStmt();
         }
-
-        if (Match(While))
-        {
-            return WhileLoop();
-        }
-
-        if (Match(Repeat))
-        {
-            return RepeatLoop();
-        }
-
-        if (Match(Get))
-        {
-            return ListGetStmt();
-        }
-
-        if (Match(How))
-        {
-            Consume(To, "You missed the word 'to'.");
-            return ProcDef();
-        }
-
-        if (Match(SyntaxTokenType.Convert))
-        {
-            return ConvertStmt();
-        }
+    }
 
     private VarDecNode VarDec()
     {
