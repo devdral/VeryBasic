@@ -196,6 +196,24 @@ public class Parser
         throw new ParseException($"I have no record of '{name}'.");
     }
 
+    private VBType Type()
+    {
+        if (Match(Number))
+        {
+            return VBType.Number;
+        } 
+        else if (Match(SyntaxTokenType.Boolean))
+        {
+            return VBType.Boolean;
+        }
+        else if (Match(SyntaxTokenType.String))
+        {
+            return VBType.String;
+        }
+
+        throw new ParseException("Here was supposed to be the type of thing you wanted: number, string, or boolean.");
+    }
+
     private INode Statement()
     {
         if (Match(Save))
@@ -385,6 +403,13 @@ public class Parser
 
         _index = restore;
         throw new ParseException($"I don't know how to '{name}'.");
+    }
+
+    private ConvertNode ConvertStmt()
+    {
+        var expr = Expression();
+        Consume(To, "After the thing you wanted to convert, put 'to'.");
+        return new ConvertNode(expr, Type());
     }
 
     private IExpressionNode Expression()

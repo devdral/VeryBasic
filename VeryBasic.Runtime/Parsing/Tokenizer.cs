@@ -290,7 +290,10 @@ public enum SyntaxTokenType
     Given,
     Return,
     Convert,
-    As
+    As,
+    Number,
+    Boolean,
+    String
 }
 
 public class NumberToken(double number) : IToken
