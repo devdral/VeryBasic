@@ -205,6 +205,11 @@ public class Parser
         {
             return IfStmt();
         }
+
+        if (Match(While))
+        {
+            return WhileLoop();
+        }
     }
 
     private VarDecNode VarDec()
@@ -260,13 +265,26 @@ public class Parser
                     otherwise.Add(Statement());
                 }
             }
+
             return new IfNode(cond, stmts, otherwise);
         }
 
         return new IfNode(cond, stmts);
     }
 
-    private IExpressionNode Expression()
+    private WhileLoopNode WhileLoop()
+    {
+        var cond = Expression();
+        var stmts = new List<INode>();
+        while (!Match(End))
+        {
+            stmts.Add(Statement());
+        }
+
+        return new WhileLoopNode(cond, stmts);
+    }
+
+private IExpressionNode Expression()
     {
         return Term();
     }
