@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection.Metadata;
+using System.Text;
 using VeryBasic.Runtime.Executing.Errors;
 using static VeryBasic.Runtime.Parsing.SyntaxTokenType;
 
@@ -12,6 +12,8 @@ public class Parser
     private int _index;
 
     private List<IToken> _tokens = [];
+    private HashSet<string> _availableVars = new();
+    private HashSet<string> _availableProcs = new();
 
     public Parser(string code)
     {
@@ -167,25 +169,29 @@ public class Parser
         return statements;
     }
 
-    private VBType Type()
+    private string VarName()
     {
-        if (Match(out var typeName, typeof(IdentToken)))
+        var name = new StringBuilder();
+        while (true)
         {
-            string typeNameS = ((IdentToken)typeName).Name;
-            return typeNameS switch
+            // Affix a space *before* every segment except the first.
+            var st = name.ToString();
+            if (_availableVars.Contains(st))
+                return st;
+            if (name.Length > 0)
+                name.Append(' ');
+            if (Match(out var part, typeof(IdentToken)))
             {
-                "number" => VBType.Number,
-                "string" => VBType.String,
-                "boolean" => VBType.Boolean,
-                _ => throw new ParseException($"I don't know what a {typeNameS} is.")
-            };
+                name.Append(((IdentToken)part).Name);
+            }
+            else if (Match(out var reservedPart, typeof(SyntaxToken)))
+            {
+                var type = ((SyntaxToken)reservedPart).Type;
+                if (type is Period)
+                    throw new ParseException($"You never recorded anything named '{name.ToString()}'.");
+                name.Append(type.ToString().ToLower());
+            }
         }
-        else if (Match(List))
-        {
-            return VBType.List;
-        }
-
-        throw new ParseException("You forgot to put the name of the kind of thing you wanted.");
     }
 
     private INode Statement()
@@ -471,147 +477,49 @@ public class Parser
 
     private IExpressionNode Expression()
     {
-        return Logical();
-    }
-
-    private IExpressionNode Logical()
-    {
-        IExpressionNode expr = Equality();
-        while (Match(And, Or))
-        {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Equality();
-            BinOp op = BinOp.And;
-            switch (opToken.Type)
-            {
-                case And:
-                    op = BinOp.And;
-                    break;
-                case Or:
-                    op = BinOp.Or;
-                    break;
-            }
-            expr = new BinaryOpNode(expr, op, right);
-        }
-        return expr;
-    }
-
-    private IExpressionNode Equality()
-    {
-        IExpressionNode expr = Comparison();
-        while (Match(Equal, NotEqual))
-        {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Comparison();
-            BinOp op = BinOp.Equal;
-            switch (opToken.Type)
-            {
-                case Equal:
-                    op = BinOp.Equal;
-                    break;
-                case NotEqual:
-                    op = BinOp.NotEqual;
-                    break;
-            }
-            expr = new BinaryOpNode(expr, op, right);
-        }
-        return expr;
-    }
-
-    private IExpressionNode Comparison()
-    {
-        IExpressionNode expr = Term();
-        while (Match(LessThan, GreaterThan, GEq, LEq))
-        {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Term();
-            BinOp op = BinOp.LessThan;
-            switch (opToken.Type)
-            {
-                case LessThan:
-                    op = BinOp.LessThan;
-                    break;
-                case LEq:
-                    op = BinOp.LEq;
-                    break;
-                case GreaterThan:
-                    op = BinOp.GreaterThan;
-                    break;
-                case GEq:
-                    op = BinOp.GEq;
-                    break;
-            }
-            expr = new BinaryOpNode(expr, op, right);
-        }
-        return expr;
+        return Term();
     }
 
     private IExpressionNode Term()
     {
-        IExpressionNode expr = Factor();
-        while (Match(Plus, Minus))
+        var expr = Product();
+
+        if (Match(Plus))
         {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Factor();
-            BinOp op = BinOp.Add;
-            switch (opToken.Type)
-            {
-                case Plus:
-                    op = BinOp.Add;
-                    break;
-                case Minus:
-                    op = BinOp.Sub;
-                    break;
-            }
-            expr = new BinaryOpNode(expr, op, right);
+            expr = new BinaryOpNode(Term(), BinOp.Add, expr);
+        } else if (Match(Minus))
+        {
+            expr = new BinaryOpNode(Term(), BinOp.Sub, expr);
         }
+
         return expr;
     }
 
-    private IExpressionNode Factor()
+    private IExpressionNode Product()
     {
-        IExpressionNode expr = Unary();
-        while (Match(Multiply, Divide))
+        var expr = Unary();
+        
+        if (Match(Multiply))
         {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Unary();
-            BinOp op = BinOp.Mul;
-            switch (opToken.Type)
-            {
-                case Multiply:
-                    op = BinOp.Mul;
-                    break;
-                case Divide:
-                    op = BinOp.Div;
-                    break;
-            }
-            expr = new BinaryOpNode(expr, op, right);
+            expr = new BinaryOpNode(Term(), BinOp.Mul, expr);
+        } else if (Match(Divide))
+        {
+            expr = new BinaryOpNode(Term(), BinOp.Div, expr);
         }
+
         return expr;
     }
 
     private IExpressionNode Unary()
     {
-        IExpressionNode expr;
-        if (Match(Minus, Not))
+        var expr = Primary();
+        if (Match(Not))
         {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode operand = Unary();
-            UnaryOp op = UnaryOp.Negate;
-            switch (opToken.Type)
-            {
-                case Minus:
-                    op = UnaryOp.Negate;
-                    break;
-                case Not:
-                    op = UnaryOp.Invert;
-                    break;
-            }
-            expr = new UnaryOpNode(op, operand);
+            expr = new UnaryOpNode(UnaryOp.Invert, expr);
         }
-        else
+        else if (Match(Minus))
         {
-            expr = Primary();
+            expr = new UnaryOpNode(UnaryOp.Invert, expr);
         }
 
         return expr;
@@ -619,88 +527,48 @@ public class Parser
 
     private IExpressionNode Primary()
     {
-        if (Check(Yes, No))
+        if (Match(Yes))
         {
-            bool value = ((SyntaxToken)Advance()).Type switch
-            {
-                Yes => true,
-                No => false,
-                _ => throw new ParseException("Boolean must be either yes or no")
-            };
-            return new ValueNode(
-                new Value(
-                    value
-                    )
-                );
-        }
-
-        if (Match(out IToken? tok1, typeof(StringToken)))
-        {
-            return new ValueNode(
-                new Value(
-                    ((StringToken)tok1).String
-                )
-            );
+            return new ValueNode(new Value(true));
         }
         
-        if (Match(out IToken? tok2, typeof(NumberToken)))
+        if (Match(No))
         {
-            return new ValueNode(
-                new Value(
-                    ((NumberToken)tok2).Number
-                )
-            );
+            return new ValueNode(new Value(false));
         }
 
-        if (Match(LBracket))
+        if (Match(out var num, typeof(NumberToken)))
         {
-            string varName = "";
-            int index = 0;
-            while (!Check(RBracket))
-            {
-                if (index > 0) varName += " ";
-                Match(out IToken? tok3, typeof(IdentToken));
-                varName += ((IdentToken)tok3).Name;
-                ++index;
-            }
-
-            Advance();
-            return new VarRefNode(varName);
+            return new ValueNode(new Value(((NumberToken)num).Number));
         }
 
-        if (Match(The))
+        if (Match(out var str, typeof(StringToken)))
         {
-            Consume(Result, "You forgot the word 'result'.");
-            return new TheResultNode();
-        }
-        
-        if (Match(LParen))
-        {
-            IExpressionNode expression = Logical();
-            if (!Match(RParen)) throw new Exception("You opened a parenthesis in a math expression, but you forgot to close it.");
-            return expression;
+            return new ValueNode(new Value(((StringToken)str).String));
         }
 
-        if (Match(A))
+        if (Check(typeof(IdentToken)))
         {
-            Consume(List, "If you wanted to make a list, you forgot the word 'list'.");
-            Consume(Of, "You forgot the word 'of'.");
-            return ListLiteral();
+            return new VarRefNode(VarName());
         }
-        
-        throw new Exception("I don't understand what you wanted to put here.");
-    }
 
-    private IExpressionNode ListLiteral()
-    {
-        List<IExpressionNode> items = [];
-        while (!Match(And))
+        var token = Peek();
+        string term;
+        if (token is SyntaxToken syntaxToken)
         {
-            items.Add(Expression());
-            Consume(Comma, "You missed a comma between list items.");
+            term = syntaxToken.Type.ToString().ToLower();
         }
-        items.Add(Expression());
-        return new ListNode(items);
+        else if (token is IdentToken identToken)
+        {
+            term = identToken.Name;
+        }
+        else
+        {
+            throw new FatalException("Error displaying error?!");
+        }
+
+        throw new ParseException(
+            $"I tried to understand—based on context—{term} as a thing, but that doesn't make sense.");
     }
 }
 
@@ -858,10 +726,9 @@ public class IfNode : INode
     }
 }
 
-public class VarDecNode(VBType type, string name, IExpressionNode? value) : INode
+public class VarDecNode(string name, IExpressionNode? value) : INode
 {
     public string Name = name;
-    public VBType Type = type;
     public IExpressionNode? Value = value;
     
     public T Accept<T>(IVisitor<T> visitor)
