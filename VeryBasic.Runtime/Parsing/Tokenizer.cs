@@ -63,10 +63,6 @@ public class Tokenizer
             {
                 HandleString();
             }
-            else if (c is ',')
-            {
-                _tokens.Add(new SyntaxToken(SyntaxTokenType.Comma));
-            }
             else if (c is '(') 
             {
                 _tokens.Add(new SyntaxToken(SyntaxTokenType.LParen));
@@ -74,14 +70,6 @@ public class Tokenizer
             else if (c is ')') 
             {
                 _tokens.Add(new SyntaxToken(SyntaxTokenType.RParen));
-            }
-            else if (c is '[')
-            {
-                _tokens.Add(new SyntaxToken(SyntaxTokenType.LBracket));
-            }
-            else if (c is ']')
-            {
-                _tokens.Add(new SyntaxToken(SyntaxTokenType.RBracket));
             }
             else if (c is '.')
             {
@@ -112,8 +100,8 @@ public class Tokenizer
                     case "repeat":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Repeat));
                         break;
-                    case "create":
-                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Declare));
+                    case "record":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Save));
                         break;
                     case "get":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Get));
@@ -123,9 +111,6 @@ public class Tokenizer
                         break;
                     case "in":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Of));
-                        break;
-                    case "variable":
-                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Variable));
                         break;
                     case "change":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Update));
@@ -188,6 +173,7 @@ public class Tokenizer
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.GEq));
                         break;
                     case "=":
+                    case "is":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Equal));
                         break;
                     case "=/=":
@@ -219,6 +205,9 @@ public class Tokenizer
                         break;
                     case "convert":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Convert));
+                        break;
+                    case "as":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.As));
                         break;
                     default:
                         _tokens.Add(new IdentToken(token.ToLower()));
@@ -264,8 +253,7 @@ public class SyntaxToken(SyntaxTokenType type) : IToken
 public enum SyntaxTokenType
 {
     End,
-    Declare,
-    Variable,
+    Save,
     List,
     Update,
     If,
@@ -276,7 +264,6 @@ public enum SyntaxTokenType
     While,
     Times,
     Otherwise,
-    Comma,
     A,
     Then,
     Constant,
@@ -299,8 +286,6 @@ public enum SyntaxTokenType
     No,
     LParen,
     RParen,
-    LBracket,
-    RBracket,
     Period,
     Get,
     Item,
@@ -309,7 +294,8 @@ public enum SyntaxTokenType
     How,
     Given,
     Return,
-    Convert
+    Convert,
+    As
 }
 
 public class NumberToken(double number) : IToken
