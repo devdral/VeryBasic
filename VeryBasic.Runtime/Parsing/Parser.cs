@@ -235,6 +235,37 @@ public class Parser
         return new VarDecNode(name, expr);
     }
 
+    private IfNode IfStmt()
+    {
+        var cond = Expression();
+        Consume(Then, "You missed a word: then.");
+        var stmts = new List<INode>();
+        while (!Check(End))
+        {
+            stmts.Add(Statement());
+        }
+
+        if (Match(Otherwise))
+        {
+            List<INode> otherwise;
+            if (Match(If))
+            {
+                otherwise = [IfStmt()];
+            }
+            else
+            {
+                otherwise = [];
+                while (!Match(End))
+                {
+                    otherwise.Add(Statement());
+                }
+            }
+            return new IfNode(cond, stmts, otherwise);
+        }
+
+        return new IfNode(cond, stmts);
+    }
+
     private IExpressionNode Expression()
     {
         return Term();
