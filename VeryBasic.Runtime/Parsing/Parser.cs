@@ -163,7 +163,6 @@ public class Parser
         while (!IsAtEnd())
         {
             statements.Add(Statement());
-            Consume(Period, "You forgot a period. Mind your punctuation!");
         }
 
         return statements;
@@ -172,26 +171,29 @@ public class Parser
     private string VarName()
     {
         var name = new StringBuilder();
-        while (true)
+        var restore = _index;
+        while (!IsAtEnd())
         {
-            // Affix a space *before* every segment except the first.
-            var st = name.ToString();
-            if (_availableVars.Contains(st))
-                return st;
+            var nameStr = name.ToString();
+            if (_availableProcs.Contains(nameStr))
+                return nameStr;
             if (name.Length > 0)
                 name.Append(' ');
-            if (Match(out var part, typeof(IdentToken)))
+            var tok = Advance();
+            if (tok is IdentToken ident)
             {
-                name.Append(((IdentToken)part).Name);
+                name.Append(ident.Name);
             }
-            else if (Match(out var reservedPart, typeof(SyntaxToken)))
+            else if (tok is SyntaxToken syntaxToken)
             {
-                var type = ((SyntaxToken)reservedPart).Type;
-                if (type is Period)
-                    throw new ParseException($"You never recorded anything named '{name.ToString()}'.");
-                name.Append(type.ToString().ToLower());
+                name.Append(syntaxToken.Type.ToString().ToLower());
             }
+            else
+                break;
         }
+
+        _index = restore;
+        throw new ParseException($"I have no record of '{name}'.");
     }
 
     private INode Statement()
@@ -215,6 +217,14 @@ public class Parser
         {
             return RepeatLoop();
         }
+
+        if (Match(How))
+        {
+            Consume(To, "After 'how', you should put 'to'.");
+            return ProcDef();
+        }
+
+        return ProcCall();
     }
 
     private VarDecNode VarDec()
@@ -222,7 +232,8 @@ public class Parser
         var expr = Expression();
         Consume(As, "You missed a word: 'as'.");
         var nameBuilder = new StringBuilder();
-        while (true)
+        var restore = _index;
+        while (!IsAtEnd())
         {
             // Affix a space *before* every segment except the first.
             if (nameBuilder.Length > 0)
@@ -234,12 +245,14 @@ public class Parser
             else if (Match(out var reservedPart, typeof(SyntaxToken)))
             {
                 var type = ((SyntaxToken)reservedPart).Type;
-                if (type is Period)
-                    break;
                 nameBuilder.Append(type.ToString().ToLower());
             }
+            else
+                break;
         }
 
+        _index = restore;
+        
         var name = nameBuilder.ToString();
         _availableVars.Add(name);
         return new VarDecNode(name, expr);
@@ -300,6 +313,78 @@ public class Parser
         }
 
         return new RepeatLoopNode(times, stmts);
+    }
+
+    private ProcCallNode ProcCall()
+    {
+        var name = ProcName();
+        var args = new List<IExpressionNode>();
+        while (!Match(And))
+        {
+            args.Add(Expression());
+        }
+        
+        // Last arg
+        args.Add(Expression());
+        
+        return new ProcCallNode(name, args);
+    }
+
+    private ProcDefNode ProcDef()
+    {
+        if (!Match(out var nameTok, typeof(StringToken)))
+            throw new ParseException("Put the name of what you wanted me to teach me in quotes after 'how to'.");
+        var name = ((StringToken)nameTok).String.ToLower();
+        var args = new List<string>();
+        if (Match(Given))
+        {
+            while (!Match(And))
+            {
+                if (!Match(out var identToken, typeof(IdentToken)))
+                    throw new ParseException("Here you should have put a name of a thing.");
+                args.Add(((IdentToken)identToken).Name);
+            }
+            
+            if (!Match(out var identToken2, typeof(IdentToken)))
+                throw new ParseException("Here you should have put a name of a thing—the last thing.");
+            args.Add(((IdentToken)identToken2).Name);
+        }
+
+        var stmts = new List<INode>();
+        while (!Match(End))
+        {
+            stmts.Add(Statement());
+        }
+
+        return new ProcDefNode(name, args, stmts);
+    }
+
+    private string ProcName()
+    {
+        var name = new StringBuilder();
+        var restore = _index;
+        while (!IsAtEnd())
+        {
+            var nameStr = name.ToString();
+            if (_availableProcs.Contains(nameStr))
+                return nameStr;
+            if (name.Length > 0)
+                name.Append(' ');
+            var tok = Advance();
+            if (tok is IdentToken ident)
+            {
+                name.Append(ident.Name);
+            }
+            else if (tok is SyntaxToken syntaxToken)
+            {
+                name.Append(syntaxToken.Type.ToString().ToLower());
+            }
+            else
+                break;
+        }
+
+        _index = restore;
+        throw new ParseException($"I don't know how to '{name}'.");
     }
 
     private IExpressionNode Expression()
@@ -399,14 +484,12 @@ public class Parser
     }
 }
 
-public class ProcDefNode(string name, List<VBType> expectedArgs, List<string> args, List<INode> body, VBType returnType)
+public class ProcDefNode(string name, List<string> args, List<INode> body)
     : INode
 {
     public string Name = name;
-    public List<VBType> ExpectedArgs = expectedArgs;
     public List<string> Args = args;
     public List<INode> Body = body;
-    public VBType ReturnType = returnType;
 
     public T Accept<T>(IVisitor<T> visitor)
     {

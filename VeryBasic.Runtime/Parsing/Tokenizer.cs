@@ -71,10 +71,6 @@ public class Tokenizer
             {
                 _tokens.Add(new SyntaxToken(SyntaxTokenType.RParen));
             }
-            else if (c is '.')
-            {
-                _tokens.Add(new SyntaxToken(SyntaxTokenType.Period));
-            }
             else if (c is '#')
             {
                 _tokens.Add(new SyntaxToken(SyntaxTokenType.NumberSign));
@@ -286,7 +282,6 @@ public enum SyntaxTokenType
     No,
     LParen,
     RParen,
-    Period,
     Get,
     Item,
     Of,
