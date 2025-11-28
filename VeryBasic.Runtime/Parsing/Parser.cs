@@ -247,232 +247,32 @@ public class Parser
             return ConvertStmt();
         }
 
-        if (Match(Return))
-        {
-            var expr = Expression();
-            return new ReturnNode(expr);
-        }
-
-        throw new ParseException("I don't understand what you want me to do.");
-    }
-
-    private INode ConvertStmt()
+    private VarDecNode VarDec()
     {
         var expr = Expression();
-        Consume(To, "You missed the word 'to'.");
-        Consume(A, "You missed the word 'a'.");
-        var type = Type();
-        return new ConvertNode(expr, type);
-    }
-
-    private INode ProcDef()
-    {
-        if (!Match(out var procName, typeof(StringToken)))
-            throw new Exception("You forgot to put the name of what it was you're explaining how to do.");
-        
-        List<VBType> expectedArgs = new List<VBType>();
-        List<string> args = new List<string>();
-        if (Match(Given))
-        {
-            while (Match(out var argName, typeof(IdentToken)))
-            {
-                args.Add(((IdentToken)argName).Name);
-                Consume(Comma, "You forgot a comma before your type choice.");
-                Consume(A, "You forgot a word: 'a'.");
-                expectedArgs.Add(Type());
-                 if (!Match(Comma)) break;
-                if (Match(And)) break;
-            }
-            
-            if (!Match(Period) && Match(out var finalArgName, typeof(IdentToken)))
-            {
-                args.Add(((IdentToken)finalArgName).Name);
-                Consume(Comma, "You forgot a comma before your type choice.");
-                Consume(A, "You forgot a word: 'a'.");
-                expectedArgs.Add(Type());
-            }
-        }
-        
-        VBType returnType = VBType.Void;
-        if (Match(Return)) returnType = Type();
-        List<INode> statements = new List<INode>();
-        while (!(IsAtEnd() || Match(End)))
-        {
-            statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!.");
-        }
-        return new ProcDefNode(((StringToken)procName).String, expectedArgs, args, statements, returnType);
-    }
-
-    private string VarIdent()
-    {
-        string varName = "";
-        int index = 0;
-        while (Match(out IToken? tok, typeof(IdentToken)))
-        {
-            if (index > 0) varName += " ";
-            varName += ((IdentToken)tok).Name;
-            ++index;
-        }
-        return varName;
-    }
-
-    private INode ListSetStmt()
-    {
-        Consume(NumberSign, "You forgot a '#' (number sign).");
-        var index = Expression();
-        Consume(Of, "You missed a word: 'of'.");
-        var list = Expression();
-        Consume(To, "You missed a word: 'to'.");
-        var value = Expression();
-        return new ListSetNode(index, list, value);
-    }
-
-    private INode VarDec()
-    {
-        Consume(Variable, "You missed a word: 'variable'.");
-        string varName = VarIdent();
-        Consume(Comma, "You forgot a comma before your type choice.");
-        Consume(A, "You forgot an 'a' before your type selection.");
-        VBType type = Type();
-        IExpressionNode? value = null;
-        if (Match(Comma))
-        {
-            Consume(From, "You forgot a word: 'from'.");
-            value = Expression();
-        }
-        return new VarDecNode(type, varName, value);
-    }
-
-    private INode VarSet()
-    {
-        string varName = VarIdent();
-        Consume(To, "You missed a word: 'to'.");
-        var value = Expression();
-        return new VarSetNode(varName, value);
-    }
-
-    private INode ProcCall()
-    {
-        // TODO: Remove unnecessary allocations; use StringBuilder
-        string procName = "";
-        int index1 = 0;
-        while (!(IsAtEnd() || Check(LBracket)))
-        {
-            string word;
-            if (Match(out var procNameToken, typeof(IdentToken)))
-            {
-                word = ((IdentToken)procNameToken).Name;
-            } 
-            else if (Check(Period))
-            {
-                return new ProcCallNode(procName.Trim(), []);
-            }
-            else
-                break;
-            if (index1 > 0) procName += " ";
-            procName += word;
-            ++index1;
-        }
-        List<IExpressionNode> args = [];
-        int index2 = 0;
-        bool shouldBeOnLast = false;
+        Consume(As, "You missed a word: 'as'.");
+        var nameBuilder = new StringBuilder();
         while (true)
         {
-            if (!IsAtEnd() &&
-                (Check(Plus, Minus, The, LBracket, A) || // Unary operators / keywords
-                 Check(typeof(NumberToken), typeof(StringToken)) // Literals/varrefs
-                 )
-               )
+            // Affix a space *before* every segment except the first.
+            if (nameBuilder.Length > 0)
+                nameBuilder.Append(' ');
+            if (Match(out var part, typeof(IdentToken)))
             {
-                args.Add(Expression());
-                if (Check(Period)) break;
-                Consume(Comma, $"You missed a comma between things you told me when using '{procName}'.");
-                if (shouldBeOnLast) throw new Exception($"You used the word 'and' before the last thing you gave me when using '{procName}'.");
-                if (Match(And)) shouldBeOnLast = true;
+                nameBuilder.Append(((IdentToken)part).Name);
             }
-            else
+            else if (Match(out var reservedPart, typeof(SyntaxToken)))
             {
-                break;
-            }
-            ++index2;
-        }
-
-        return new ProcCallNode(procName, args);
-    }
-
-    private INode IfStmt()
-    {
-        IExpressionNode cond = Expression();
-        Consume(Then, "You missed a word: 'then'.");
-        List<INode> statements = new List<INode>();
-        bool hasElse = false;
-        while (!Match(End))
-        {
-            statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!");
-            if (Match(Otherwise))
-            {
-                hasElse = true;
-                break;
+                var type = ((SyntaxToken)reservedPart).Type;
+                if (type is Period)
+                    break;
+                nameBuilder.Append(type.ToString().ToLower());
             }
         }
 
-        if (hasElse)
-        {
-            if (Match(Comma))
-            {
-                Consume(If, "You missed a word: 'if'.");
-                return new IfNode(cond, statements, [IfStmt()]);
-            }
-            else
-            {
-                List<INode> elseStatements = new List<INode>();
-                while (!Match(End))
-                {
-                    elseStatements.Add(Statement());
-                    Consume(Period, "You missed a period. Mind your punctuation!");
-                }
-                return new IfNode(cond, statements, elseStatements);
-            }
-        }
-        return new IfNode(cond, statements);
-    }
-
-    private INode WhileLoop()
-    {
-        IExpressionNode cond = Expression();
-        List<INode> statements = new List<INode>();
-        while (!Match(End))
-        {
-            statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!");
-        }
-
-        return new WhileLoopNode(cond, statements);
-    }
-
-    private INode RepeatLoop()
-    {
-        IExpressionNode times = Expression();
-        Consume(Times, "You missed a word: 'times'.");
-        List<INode> statements = new List<INode>();
-        while (!Match(End))
-        {
-            statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!");
-        }
-        return new RepeatLoopNode(times, statements);
-    }
-
-    private INode ListGetStmt()
-    {
-        Consume(Item, "You missed a word: 'item'.");
-        Consume(NumberSign, "You missed a '#' (number sign).");
-        var index = Expression();
-        Consume(Of,  "You missed a word: 'of'.");
-        var list = Expression();
-        return new ListGetNode(index, list);
+        var name = nameBuilder.ToString();
+        _availableVars.Add(name);
+        return new VarDecNode(name, expr);
     }
 
     private IExpressionNode Expression()
