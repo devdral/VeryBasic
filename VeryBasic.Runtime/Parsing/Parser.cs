@@ -247,6 +247,11 @@ public class Parser
             return ProcDef();
         }
 
+        if (Match(SyntaxTokenType.Convert))
+        {
+            return ConvertStmt();
+        }
+
         return ProcCall();
     }
 
@@ -334,6 +339,7 @@ public class Parser
             catch (ParseException)
             {
                 _index = restore;
+                break;
             }
         }
 
@@ -361,14 +367,16 @@ public class Parser
         {
             while (!Match(And))
             {
-                if (!Match(out var identToken, typeof(IdentToken)))
-                    throw new ParseException("Here you should have put a name of a thing.");
-                args.Add(((IdentToken)identToken).Name);
+                if (!Match(out var stringToken, typeof(StringToken)))
+                    break;
+                args.Add(((StringToken)stringToken).String);
             }
-            
-            if (!Match(out var identToken2, typeof(IdentToken)))
-                throw new ParseException("Here you should have put a name of a thing—the last thing.");
-            args.Add(((IdentToken)identToken2).Name);
+
+            var restore = _index;
+            if (!Match(out var stringToken2, typeof(StringToken)))
+                _index = restore;
+            else
+                args.Add(((StringToken)stringToken2).String);
         }
 
         var stmts = new List<INode>();
@@ -415,6 +423,7 @@ public class Parser
     {
         var expr = Expression();
         Consume(To, "After the thing you wanted to convert, put 'to'.");
+        Consume(A, "Before the type of thing you wanted to make, put 'a'.");
         return new ConvertNode(expr, Type());
     }
 
@@ -422,7 +431,7 @@ public class Parser
     {
         return Term();
     }
-
+    
     private IExpressionNode Term()
     {
         var expr = Product();
@@ -488,6 +497,17 @@ public class Parser
         if (Match(out var str, typeof(StringToken)))
         {
             return new ValueNode(new Value(((StringToken)str).String));
+        }
+
+        var restore = _index;
+        if (Match(The))
+        {
+            if (!Match(Result))
+                _index = restore;
+            else
+            {
+                return new TheResultNode();
+            }
         }
         
         return new VarRefNode(VarName());

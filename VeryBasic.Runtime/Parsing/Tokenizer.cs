@@ -205,6 +205,15 @@ public class Tokenizer
                     case "as":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.As));
                         break;
+                    case "number":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Number));
+                        break;
+                    case "boolean":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Boolean));
+                        break;
+                    case "string":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.String));
+                        break;
                     default:
                         _tokens.Add(new IdentToken(token.ToLower()));
                         break;
