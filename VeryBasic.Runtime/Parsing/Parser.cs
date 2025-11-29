@@ -174,24 +174,29 @@ public class Parser
         var restore = _index;
         while (!IsAtEnd())
         {
-            var nameStr = name.ToString();
-            if (_availableProcs.Contains(nameStr))
-                return nameStr;
-            if (name.Length > 0)
-                name.Append(' ');
             var tok = Advance();
             if (tok is IdentToken ident)
             {
+                if (name.Length > 0)
+                    name.Append(' ');
                 name.Append(ident.Name);
             }
             else if (tok is SyntaxToken syntaxToken)
             {
+                if (name.Length > 0)
+                    name.Append(' ');
                 name.Append(syntaxToken.Type.ToString().ToLower());
             }
             else
                 break;
+            
+            var nameStr = name.ToString();
+            if (_availableVars.Contains(nameStr))
+                return nameStr;
         }
 
+        if (_availableVars.Contains(name.ToString()))
+            return name.ToString();
         _index = restore;
         throw new ParseException($"I have no record of '{name}'.");
     }
@@ -249,29 +254,11 @@ public class Parser
     {
         var expr = Expression();
         Consume(As, "You missed a word: 'as'.");
-        var nameBuilder = new StringBuilder();
-        var restore = _index;
-        while (!IsAtEnd())
-        {
-            // Affix a space *before* every segment except the first.
-            if (nameBuilder.Length > 0)
-                nameBuilder.Append(' ');
-            if (Match(out var part, typeof(IdentToken)))
-            {
-                nameBuilder.Append(((IdentToken)part).Name);
-            }
-            else if (Match(out var reservedPart, typeof(SyntaxToken)))
-            {
-                var type = ((SyntaxToken)reservedPart).Type;
-                nameBuilder.Append(type.ToString().ToLower());
-            }
-            else
-                break;
-        }
 
-        _index = restore;
+        if (!Match(out var nameTok, typeof(StringToken)))
+            throw new ParseException("You were supposed to put the name of the record in quotes.");
         
-        var name = nameBuilder.ToString();
+        var name = ((StringToken)nameTok).String;
         _availableVars.Add(name);
         return new VarDecNode(name, expr);
     }
@@ -339,12 +326,28 @@ public class Parser
         var args = new List<IExpressionNode>();
         while (!Match(And))
         {
+            var restore = _index;
+            try
+            {
+                args.Add(Expression());
+            }
+            catch (ParseException)
+            {
+                _index = restore;
+            }
+        }
+
+        var restore2 = _index;
+        // Last arg
+        try
+        {
             args.Add(Expression());
         }
-        
-        // Last arg
-        args.Add(Expression());
-        
+        catch (ParseException)
+        {
+            _index = restore2;
+        }
+
         return new ProcCallNode(name, args);
     }
 
@@ -374,6 +377,7 @@ public class Parser
             stmts.Add(Statement());
         }
 
+        _availableProcs.Add(name);
         return new ProcDefNode(name, args, stmts);
     }
 
@@ -383,22 +387,24 @@ public class Parser
         var restore = _index;
         while (!IsAtEnd())
         {
-            var nameStr = name.ToString();
-            if (_availableProcs.Contains(nameStr))
-                return nameStr;
-            if (name.Length > 0)
-                name.Append(' ');
             var tok = Advance();
             if (tok is IdentToken ident)
             {
+                if (name.Length > 0)
+                    name.Append(' ');
                 name.Append(ident.Name);
             }
             else if (tok is SyntaxToken syntaxToken)
             {
+                if (name.Length > 0)
+                    name.Append(' ');
                 name.Append(syntaxToken.Type.ToString().ToLower());
             }
             else
                 break;
+            var nameStr = name.ToString();
+            if (_availableProcs.Contains(nameStr))
+                return nameStr;
         }
 
         _index = restore;
@@ -483,29 +489,13 @@ public class Parser
         {
             return new ValueNode(new Value(((StringToken)str).String));
         }
+        
+        return new VarRefNode(VarName());
+    }
 
-        if (Check(typeof(IdentToken)))
-        {
-            return new VarRefNode(VarName());
-        }
-
-        var token = Peek();
-        string term;
-        if (token is SyntaxToken syntaxToken)
-        {
-            term = syntaxToken.Type.ToString().ToLower();
-        }
-        else if (token is IdentToken identToken)
-        {
-            term = identToken.Name;
-        }
-        else
-        {
-            throw new FatalException("Error displaying error?!");
-        }
-
-        throw new ParseException(
-            $"I tried to understand—based on context—{term} as a thing, but that doesn't make sense.");
+    public void RegisterPreexistingProcedure(string name)
+    {
+        _availableProcs.Add(name);
     }
 }
 
@@ -661,10 +651,10 @@ public class IfNode : INode
     }
 }
 
-public class VarDecNode(string name, IExpressionNode? value) : INode
+public class VarDecNode(string name, IExpressionNode value) : INode
 {
     public string Name = name;
-    public IExpressionNode? Value = value;
+    public IExpressionNode Value = value;
     
     public T Accept<T>(IVisitor<T> visitor)
     {

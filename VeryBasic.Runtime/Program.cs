@@ -34,6 +34,10 @@ public class Program
     {
         if (_source is null)
             throw new FatalException("No source provided.");
+        foreach (var proc in _environment.Externs.Keys)
+        {
+            _parser.RegisterPreexistingProcedure(proc);
+        }
         _program = _compiler.Compile(_parser);
         _virtualMachine = new VirtualMachine(_program, _environment);
     }
@@ -51,6 +55,10 @@ public class Program
         _parser = new Parser(_source);
         if (_compiler is null)
             _compiler = new Compiler();
+        foreach (var proc in _environment.Externs.Keys)
+        {
+            _parser.RegisterPreexistingProcedure(proc);
+        }
         _program = _compiler.Compile(_parser);
         // Hot-swap the virtual machine's source
         // without erasing its state.

@@ -18,6 +18,7 @@ public class Compiler
     private VBType _priorResult = VBType.Void;
     private string? _currentProc;
     private bool _returned;
+    private VBType? _requestedType = null;
     
     private class Variable
     {
@@ -36,14 +37,12 @@ public class Compiler
     private class Procedure
     {
         public VBType ReturnType;
-        public List<VBType> ParamTypes;
         public int Address;
-        public Dictionary<string, Param> Params = new();
+        public OrderedDictionary<string, Param> Params = new();
 
-        public Procedure(VBType returnType, List<VBType> paramTypes, int address)
+        public Procedure(VBType returnType, int address)
         {
             ReturnType = returnType;
-            ParamTypes = paramTypes;
             Address = address;
         }
     }
@@ -209,15 +208,10 @@ public class Compiler
             case VarDecNode dec:
             {
                 var id = NextVar();
-                _vars[dec.Name] = new Variable(dec.Type, id, _scopeLevel);
-                if (dec.Value is not null)
-                {
-                    var type = ProcessNode(dec.Value);
-                    if (type != dec.Type)
-                        throw new ParseException($"A {type.ToString()} is not a {dec.Type.ToString()}.");
-                    Operation(OpCode.Store);
-                    Arg(id);
-                }
+                var type = ProcessNode(dec.Value);
+                Operation(OpCode.Store);
+                Arg(id);
+                _vars[dec.Name] = new Variable(type, id, _scopeLevel);
 
                 return VBType.Void;
             }
@@ -258,7 +252,10 @@ public class Compiler
                 {
                     Operation(OpCode.Load);
                     Arg      (param.Cell);
-                    return param.Type;
+                    if (param.Type != _requestedType)
+                        throw new ParseException(
+                            $"This would require that '{varRef.Name}' to be both a {param.Type} and a {_requestedType} at the same time.");
+                    return _requestedType ?? VBType.Unknown;
                 }
                 else
                 {
@@ -267,7 +264,6 @@ public class Compiler
                     Operation(OpCode.Load);
                     Arg(var.Id);
                     return var.Type;
-
                 }
             }
             case IfNode ifNode:
@@ -404,12 +400,12 @@ public class Compiler
                         throw new ParseException($"I don't know how to {procCall.Name}.");
                 }
 
-                if (args.Count != proc.ParamTypes.Count)
+                if (args.Count != proc.Params.Count)
                     throw new ParseException($"You put too few (or too many) arguments to use '{procCall.Name}'.");
                 for (var i = 0; i < args.Count; i++)
                 {
                     var arg = ProcessNode(args[i]);
-                    var expectedType = proc.ParamTypes[i];
+                    var expectedType = proc.Params.GetAt(i).Value.Type;
                     if (arg != expectedType)
                         throw new ParseException(
                             $"You put a {arg.ToString()}, when you should have put a {expectedType.ToString()}.");
@@ -423,16 +419,14 @@ public class Compiler
             {
                 if (_procedures.ContainsKey(procDef.Name))
                     throw new ParseException($"You already told me how to {procDef.Name}.");
-                var expectedArgs = procDef.ExpectedArgs;
                 var address = _program.Count;
-                var proc = new Procedure(procDef.ReturnType, expectedArgs, address);
+                var proc = new Procedure(VBType.Unknown, address);
                 var cells = new List<byte>();
-                for (var index = 0; index < expectedArgs.Count; index++)
+                for (var index = 0; index < procDef.Args.Count; index++)
                 {
-                    var arg = expectedArgs[index];
                     var name = procDef.Args[index];
                     var id = NextVar();
-                    proc.Params[name] = new Param(arg, index, id);
+                    proc.Params[name] = new Param(VBType.Unknown, index, id);
                     cells.Add(id);
                 }
                 
@@ -451,8 +445,21 @@ public class Compiler
                 {
                     _priorResult = ProcessNode(stmt);
                 }
+
                 if (!_returned)
+                {
                     Operation(OpCode.Return);
+                    proc.ReturnType = VBType.Void;
+                }
+
+                foreach (var param in proc.Params)
+                {
+                    if (param.Value.Type is VBType.Unknown)
+                    {
+                        throw new ParseException(
+                            $"You didn't give me enough information to know what type '{param.Key}' is.");
+                    }
+                }
 
                 _currentProc = null;
                 return VBType.Void;
@@ -479,11 +486,12 @@ public class Compiler
             case ReturnNode returnNode:
             {
                 if (_currentProc is null)
-                    throw new ParseException("I can't return something when I wasn't told to follow a recipe in the first place.");
+                    throw new ParseException("I can't return something when I wasn't told to follow a procedure in the first place.");
                 _returned = true;
                 var type = ProcessNode(returnNode.Value);
                 Operation(OpCode.Return);
-                return type;
+                _procedures[_currentProc].ReturnType = type;
+                return VBType.Void;
             }
     }
         throw new FatalException($"Unknown node type: {node.GetType()}");
@@ -504,6 +512,7 @@ public class Compiler
             }
             case BinOp.Sub:
             {
+                _requestedType = VBType.Number;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)
@@ -513,6 +522,7 @@ public class Compiler
             }
             case BinOp.Mul:
             {
+                _requestedType = VBType.Number;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)
@@ -522,6 +532,7 @@ public class Compiler
             }
             case BinOp.Div:
             {
+                _requestedType = VBType.Number;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)
@@ -531,6 +542,7 @@ public class Compiler
             }
             case BinOp.Equal:
             {
+                _requestedType = VBType.Unknown;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 Operation(OpCode.Equal);
@@ -538,6 +550,7 @@ public class Compiler
             }
             case BinOp.NotEqual:
             {
+                _requestedType = VBType.Unknown;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 Operation(OpCode.NotEqual);
@@ -545,6 +558,7 @@ public class Compiler
             }
             case BinOp.GreaterThan:
             {
+                _requestedType = VBType.Number;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)
@@ -554,6 +568,7 @@ public class Compiler
             }
             case BinOp.LessThan:
             {
+                _requestedType = VBType.Number;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)
@@ -563,6 +578,7 @@ public class Compiler
             }
             case BinOp.GEq:
             {
+                _requestedType = VBType.Number;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)
@@ -572,6 +588,7 @@ public class Compiler
             }
             case BinOp.LEq:
             {
+                _requestedType = VBType.Number;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)
@@ -590,6 +607,7 @@ public class Compiler
         {
             case UnaryOp.Invert:
             {
+                _requestedType = VBType.Boolean;
                 var arg = ProcessNode(node.Expr);
                 if (arg != VBType.Boolean)
                     throw new ParseException($"I can't know when a {arg.ToString()} is true or false; I can't know the opposite either.");
@@ -598,6 +616,7 @@ public class Compiler
             }
             case UnaryOp.Negate:
             {
+                _requestedType = VBType.Number;
                 var arg = ProcessNode(node.Expr);
                 if (arg != VBType.Number)
                     throw new ParseException($"I can't find the inverse to a {arg.ToString()}; it must be a number.");
