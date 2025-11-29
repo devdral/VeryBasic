@@ -7,22 +7,23 @@ namespace VeryBasic.Runtime.Parsing;
 
 public class Parser
 {
-    private string _code;
+    public string Code { get; set; }
 
     private int _index;
 
     private List<IToken> _tokens = [];
     private HashSet<string> _availableVars = new();
     private HashSet<string> _availableProcs = new();
+    private HashSet<string> _availableParams = new();
 
     public Parser(string code)
     {
-        _code = code;
+        Code = code;
     }
 
     public List<INode> Parse()
     {
-        List<IToken> tokens = new Tokenizer(_code).Tokenize();
+        List<IToken> tokens = new Tokenizer(Code).Tokenize();
         _tokens = tokens;
         return Program();
     }
@@ -191,7 +192,7 @@ public class Parser
                 break;
             
             var nameStr = name.ToString();
-            if (_availableVars.Contains(nameStr))
+            if (_availableVars.Contains(nameStr) || _availableParams.Contains(nameStr))
                 return nameStr;
         }
 
@@ -250,6 +251,11 @@ public class Parser
         if (Match(SyntaxTokenType.Convert))
         {
             return ConvertStmt();
+        }
+
+        if (Match(Return))
+        {
+            return ReturnStmt();
         }
 
         return ProcCall();
@@ -369,7 +375,9 @@ public class Parser
             {
                 if (!Match(out var stringToken, typeof(StringToken)))
                     break;
-                args.Add(((StringToken)stringToken).String);
+                var arg = ((StringToken)stringToken).String;
+                args.Add(arg);
+                _availableParams.Add(arg);
             }
 
             var restore = _index;
@@ -386,6 +394,7 @@ public class Parser
         }
 
         _availableProcs.Add(name);
+        _availableParams.Clear();
         return new ProcDefNode(name, args, stmts);
     }
 
@@ -425,6 +434,11 @@ public class Parser
         Consume(To, "After the thing you wanted to convert, put 'to'.");
         Consume(A, "Before the type of thing you wanted to make, put 'a'.");
         return new ConvertNode(expr, Type());
+    }
+
+    private ReturnNode ReturnStmt()
+    {
+        return new ReturnNode(Expression());
     }
 
     private IExpressionNode Expression()

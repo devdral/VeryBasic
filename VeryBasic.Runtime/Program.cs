@@ -52,9 +52,11 @@ public class Program
     public void RunCode(string code)
     {
         _source = code;
-        _parser = new Parser(_source);
-        if (_compiler is null)
-            _compiler = new Compiler();
+        if (_parser is null)
+            _parser = new Parser(_source);
+        else
+            _parser.Code = _source;
+        _compiler ??= new Compiler();
         foreach (var proc in _environment.Externs.Keys)
         {
             _parser.RegisterPreexistingProcedure(proc);

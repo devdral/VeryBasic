@@ -252,10 +252,13 @@ public class Compiler
                 {
                     Operation(OpCode.Load);
                     Arg      (param.Cell);
-                    if (param.Type != _requestedType)
+                    if (param.Type != _requestedType &&
+                        !(param.Type is VBType.Unknown ||
+                        _requestedType is VBType.Unknown))
                         throw new ParseException(
                             $"This would require that '{varRef.Name}' to be both a {param.Type} and a {_requestedType} at the same time.");
-                    return _requestedType ?? VBType.Unknown;
+                    param.Type = _requestedType ?? VBType.Unknown;
+                    return param.Type;
                 }
                 else
                 {
@@ -527,7 +530,7 @@ public class Compiler
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)
                     throw new ParseException($"I can't add two things if they aren't numbers.");
-                Operation(OpCode.Add);
+                Operation(OpCode.Mul);
                 return VBType.Number;
             }
             case BinOp.Div:
