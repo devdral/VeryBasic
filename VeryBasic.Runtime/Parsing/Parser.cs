@@ -163,7 +163,11 @@ public class Parser
         List<INode> statements = new List<INode>();
         while (!IsAtEnd())
         {
-            statements.Add(Statement());
+            var stmt = Statement();
+            if (stmt is not null)
+                statements.Add(stmt);
+            else
+                break;
         }
 
         return statements;
@@ -220,7 +224,7 @@ public class Parser
         throw new ParseException("Here was supposed to be the type of thing you wanted: number, string, or boolean.");
     }
 
-    private INode Statement()
+    private INode? Statement()
     {
         if (Match(Save))
         {
@@ -331,9 +335,11 @@ public class Parser
         return new RepeatLoopNode(times, stmts);
     }
 
-    private ProcCallNode ProcCall()
+    private ProcCallNode? ProcCall()
     {
         var name = ProcName();
+        if (name is null)
+            return null;
         var args = new List<IExpressionNode>();
         while (!Match(And))
         {
@@ -398,7 +404,7 @@ public class Parser
         return new ProcDefNode(name, args, stmts);
     }
 
-    private string ProcName()
+    private string? ProcName()
     {
         var name = new StringBuilder();
         var restore = _index;
@@ -425,6 +431,8 @@ public class Parser
         }
 
         _index = restore;
+        if (name.ToString() is "")
+            return null;
         throw new ParseException($"I don't know how to '{name}'.");
     }
 
