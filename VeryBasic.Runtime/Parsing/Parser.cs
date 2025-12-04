@@ -258,7 +258,20 @@ public class Parser
             return ReturnStmt();
         }
 
+        if (Match(Update))
+        {
+            return UpdateStmt();
+        }
+
         return ProcCall();
+    }
+
+    private VarSetNode UpdateStmt()
+    {
+        var name = VarName();
+        Consume(To, "You missed a word: 'to'.");
+        var expr = Expression();
+        return new VarSetNode(name, expr);
     }
 
     private VarDecNode VarDec()
@@ -443,9 +456,39 @@ public class Parser
 
     private IExpressionNode Expression()
     {
-        return Term();
+        return Comparison();
     }
-    
+
+    private IExpressionNode Comparison()
+    {
+        var expr = Term();
+        if (Match(LessThan))
+        {
+            expr = new BinaryOpNode(expr, BinOp.LessThan, Term());
+        }
+        else if (Match(GreaterThan))
+        {
+            expr = new BinaryOpNode(expr, BinOp.GreaterThan, Term());
+        }
+        else if (Match(LEq))
+        {
+            expr = new BinaryOpNode(expr, BinOp.LEq, Term());
+        }
+        else if (Match(GEq))
+        {
+            expr = new BinaryOpNode(expr, BinOp.GEq, Term());
+        }
+        else if (Match(Equal))
+        {
+            expr = new BinaryOpNode(expr, BinOp.Equal, Term());
+        }
+        else if (Match(NotEqual))
+        {
+            expr = new BinaryOpNode(expr, BinOp.NotEqual, Term());
+        }
+
+        return expr;
+    }
     private IExpressionNode Term()
     {
         var expr = Product();
