@@ -39,6 +39,25 @@ public class ByteCode
         return s.ToString();
     }
 
+    public void Append(ByteCode other)
+    {
+        var newProgram = new byte[_program.Length + other.Length];
+        var i = 0;
+        foreach (var by in _program)
+        {
+            newProgram[i] = by;
+            i++;
+        }
+
+        foreach (var by in other._program)
+        {
+            newProgram[i] = by;
+            i++;
+        }
+
+        _program = newProgram;
+    }
+
     public int Length => _program.Length;
 }
 

@@ -44,17 +44,4 @@ public class Program
             throw new FatalException("Program not compiled. Please call Compile before calling Run.");
         _virtualMachine.Run();
     }
-
-    public void RunCode(string code)
-    {
-        _source = code;
-        _parser = new Parser(_source);
-        if (_compiler is null)
-            _compiler = new Compiler();
-        _program = _compiler.Compile(_parser);
-        // Hot-swap the virtual machine's source
-        // without erasing its state.
-        _virtualMachine.Program = _program;
-        _virtualMachine.Run();
-    }
 }

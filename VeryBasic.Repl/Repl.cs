@@ -7,7 +7,10 @@ namespace VeryBasic.Repl;
 
 public class Repl
 {
-    private VeryBasic.Runtime.Program _runner = new(DefaultEnv());
+    private ExternTable _env = DefaultEnv();
+    private Parser? _parser;
+    private Compiler? _compiler;
+    private VirtualMachine? _runner;
 
     public static ExternTable DefaultEnv()
     {
@@ -47,6 +50,26 @@ public class Repl
         }
     }
 
+    private void RunCode(string program)
+    {
+        if (_compiler is null)
+        {
+            _parser = new Parser(program);
+            _compiler = new Compiler();
+            _compiler.RegisterExterns(_env);
+            var code = _compiler.Compile(_parser);
+            _runner = new VirtualMachine(code, _env);
+            _runner.Run();
+        }
+        else
+        {
+            _parser.Code = program;
+            var code = _compiler.CompileMore(_parser);
+            _runner.Program = code;
+            _runner.Run();
+        }
+    }
+
     public void Start()
     {
         Console.Write(">>");
@@ -69,7 +92,7 @@ public class Repl
                 program += userCommand;
                 try
                 {
-                    _runner.RunCode(program);
+                    RunCode(program);
                 }
                 catch (ParseException ex)
                 {

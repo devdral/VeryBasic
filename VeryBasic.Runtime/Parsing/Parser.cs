@@ -7,20 +7,29 @@ namespace VeryBasic.Runtime.Parsing;
 
 public class Parser
 {
-    private string _code;
+    public string Code
+    {
+        get => _code;
+        set
+        {
+            Reset();
+            _code = value;   
+        }
+    }
 
     private int _index;
 
     private List<IToken> _tokens = [];
+    private string _code;
 
     public Parser(string code)
     {
-        _code = code;
+        Code = code;
     }
 
     public List<INode> Parse()
     {
-        List<IToken> tokens = new Tokenizer(_code).Tokenize();
+        List<IToken> tokens = new Tokenizer(Code).Tokenize();
         _tokens = tokens;
         return Program();
     }
@@ -151,6 +160,11 @@ public class Parser
     {
         if (_index + offset >= _tokens.Count) return null;
         return _tokens[_index + offset];
+    }
+
+    public void Reset()
+    {
+        _index = 0;
     }
 
     // Node parsers

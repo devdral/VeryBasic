@@ -4,7 +4,7 @@ namespace VeryBasic.Runtime.Executing;
 
 public class VirtualMachine
 {
-    public ByteCode Program { private get; set; }
+    public ByteCode Program { get; set; }
     public ExternTable Externs { get; private set; }
 
     private Stack<Value> _stack = new();
@@ -20,7 +20,6 @@ public class VirtualMachine
 
     public void Run()
     {
-        _ip = 0;
         while (_ip < Program.Length)
         {
             OpCode opCode = Program.GetOpCodeAt(_ip);

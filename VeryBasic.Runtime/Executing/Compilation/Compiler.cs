@@ -70,6 +70,17 @@ public class Compiler
         // Backpatch later
         _nextProcAddress = 5;
         IncludeAddress(_nextProcAddress);
+        foreach (var node in _ast)  
+        {
+            _priorResult = ProcessNode(node);
+        }
+
+        return new ByteCode(_program.ToArray());
+    }
+
+    public ByteCode CompileMore(Parser parser)
+    {
+        _ast = parser.Parse();
         foreach (var node in _ast)
         {
             _priorResult = ProcessNode(node);
