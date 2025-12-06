@@ -75,5 +75,7 @@ public enum OpCode
     
     Call,
     Return,
-    CallExtern
+    CallExtern,
+    And,
+    Or
 }

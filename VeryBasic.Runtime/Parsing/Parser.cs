@@ -464,35 +464,71 @@ public class Parser
 
     private IExpressionNode Expression()
     {
-        return Comparison();
+        return Boolean();
+    }
+
+    private IExpressionNode Boolean()
+    {
+        var expr = Comparison();
+
+        while (true)
+        {
+            if (Match(And))
+            {
+                var right = Comparison();
+                expr = new BinaryOpNode(expr, BinOp.And, right);
+            }
+            else if (Match(Or))
+            {
+                var right = Comparison();
+                expr = new BinaryOpNode(expr, BinOp.Or, right);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return expr;
     }
 
     private IExpressionNode Comparison()
     {
         var expr = Term();
-        if (Match(LessThan))
+        while (true)
         {
-            expr = new BinaryOpNode(expr, BinOp.LessThan, Term());
-        }
-        else if (Match(GreaterThan))
-        {
-            expr = new BinaryOpNode(expr, BinOp.GreaterThan, Term());
-        }
-        else if (Match(LEq))
-        {
-            expr = new BinaryOpNode(expr, BinOp.LEq, Term());
-        }
-        else if (Match(GEq))
-        {
-            expr = new BinaryOpNode(expr, BinOp.GEq, Term());
-        }
-        else if (Match(Equal))
-        {
-            expr = new BinaryOpNode(expr, BinOp.Equal, Term());
-        }
-        else if (Match(NotEqual))
-        {
-            expr = new BinaryOpNode(expr, BinOp.NotEqual, Term());
+            if (Match(LessThan))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.LessThan, right);
+            }
+            else if (Match(GreaterThan))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.GreaterThan, right);
+            }
+            else if (Match(LEq))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.LEq, right);
+            }
+            else if (Match(GEq))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.GEq, right);
+            }
+            else if (Match(Equal))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.Equal, right);
+            }
+            else if (Match(NotEqual))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.NotEqual, right);
+            }
+            else
+                break;
         }
 
         return expr;
@@ -500,13 +536,19 @@ public class Parser
     private IExpressionNode Term()
     {
         var expr = Product();
-
-        if (Match(Plus))
+        while (true)
         {
-            expr = new BinaryOpNode(Term(), BinOp.Add, expr);
-        } else if (Match(Minus))
-        {
-            expr = new BinaryOpNode(Term(), BinOp.Sub, expr);
+            if (Match(Plus))
+            {
+                var right = Product();
+                expr = new BinaryOpNode(expr, BinOp.Add, right);
+            } else if (Match(Minus))
+            {
+                var right = Product();
+                expr = new BinaryOpNode(expr, BinOp.Sub, right);
+            }
+            else
+                break;
         }
 
         return expr;
@@ -515,13 +557,20 @@ public class Parser
     private IExpressionNode Product()
     {
         var expr = Unary();
-        
-        if (Match(Multiply))
+
+        while (true)
         {
-            expr = new BinaryOpNode(Term(), BinOp.Mul, expr);
-        } else if (Match(Divide))
-        {
-            expr = new BinaryOpNode(Term(), BinOp.Div, expr);
+            if (Match(Multiply))
+            {
+                var right = Unary();
+                expr = new BinaryOpNode(expr, BinOp.Mul, right);
+            } else if (Match(Divide))
+            {
+                var right = Unary();
+                expr = new BinaryOpNode(expr, BinOp.Div, right);
+            }
+            else
+                break;
         }
 
         return expr;
@@ -544,6 +593,13 @@ public class Parser
 
     private IExpressionNode Primary()
     {
+        if (Match(LParen))
+        {
+            var expr = Expression();
+            Consume(RParen, "Make sure to include the right parenthesis.");
+            return expr;
+        }
+        
         if (Match(Yes))
         {
             return new ValueNode(new Value(true));

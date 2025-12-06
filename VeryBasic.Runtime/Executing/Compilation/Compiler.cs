@@ -599,6 +599,26 @@ public class Compiler
                 Operation(OpCode.LessEqual);
                 return VBType.Boolean;
             }
+            case BinOp.And:
+            {
+                _requestedType = VBType.Boolean;
+                var arg1 = ProcessNode(node.Left);
+                var arg2 = ProcessNode(node.Right);
+                if (arg1 != VBType.Boolean || arg2 != VBType.Boolean)
+                    throw new ParseException("To check if two things are true, they must be booleans.");
+                Operation(OpCode.And);
+                return VBType.Boolean;
+            }
+            case BinOp.Or:
+            {
+                _requestedType = VBType.Boolean;
+                var arg1 = ProcessNode(node.Left);
+                var arg2 = ProcessNode(node.Right);
+                if (arg1 != VBType.Boolean || arg2 != VBType.Boolean)
+                    throw new ParseException("To check if two things are true, they must be booleans.");
+                Operation(OpCode.Or);
+                return VBType.Boolean;
+            }
             default:
                 throw new FatalException("Binary operation not implemented.");
         }
