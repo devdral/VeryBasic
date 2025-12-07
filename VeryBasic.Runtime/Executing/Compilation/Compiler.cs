@@ -1,4 +1,3 @@
-using System.Net.NetworkInformation;
 using VeryBasic.Runtime.Executing.Errors;
 using VeryBasic.Runtime.Parsing;
 
@@ -506,6 +505,7 @@ public class Compiler
         {
             case BinOp.Add:
             {
+                _requestedType = VBType.Number;
                 var arg1 = ProcessNode(node.Left);
                 var arg2 = ProcessNode(node.Right);
                 if (arg1 != VBType.Number || arg2 != VBType.Number)

@@ -354,7 +354,7 @@ public class Parser
         if (name is null)
             return null;
         var args = new List<IExpressionNode>();
-        while (!Match(And))
+        while (true)
         {
             var restore = _index;
             try
@@ -366,17 +366,6 @@ public class Parser
                 _index = restore;
                 break;
             }
-        }
-
-        var restore2 = _index;
-        // Last arg
-        try
-        {
-            args.Add(Expression());
-        }
-        catch (ParseException)
-        {
-            _index = restore2;
         }
 
         return new ProcCallNode(name, args);
@@ -403,7 +392,11 @@ public class Parser
             if (!Match(out var stringToken2, typeof(StringToken)))
                 _index = restore;
             else
-                args.Add(((StringToken)stringToken2).String);
+            {
+                var arg = ((StringToken)stringToken2).String;
+                args.Add(arg);
+                _availableParams.Add(arg);
+            }
         }
 
         var stmts = new List<INode>();
