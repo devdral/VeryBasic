@@ -38,13 +38,13 @@ capitalization (except in strings) is unimportant. No unnecessary
 symbols are used in this function call: just a simple command in
 English.
 
-You can call other functions too, like `take input`.
+You can call other functions too, like `ask`.
 
 ```verybasic
-Take input.
+Ask "What's your name? ".
 ```
 
-The REPL will now print a "?" prompting the user for input.
+The REPL will now print "What's you name?" prompting the user for input.
 
 ### Control flow
 
@@ -60,7 +60,7 @@ Done.
 
 #### The result
 
-The function `take input` cannot be used in expression; all function calls are statements. Instead
+The function `ask` cannot be used in expression; all function calls are statements. Instead
 its return value will be stored inside the system variable `the result`. Note that if you try to
 access it after statement that did not return anything, it will produce an error.
 
@@ -86,7 +86,7 @@ the loop terminates.
 
 ```verybasic
 Take input.
-While the result =/= "exit" take input. Done.
+While the result is not "exit" take input. Done.
 ```
 
 ### Variables
@@ -95,12 +95,10 @@ Variables are created using an easy-to-understand syntax that expresses what it 
 in plain English.
 
 ```verybasic
-Create variable x, a number, from 40.
-Change x to [x] + 2. 
-If [x] = 42 then print "The meaning of life!". Otherwise print "Meaningless!". Done.
+Record 40 as "x".
+Change x to x + 2. 
+If x = 42 then print "The meaning of life!". Otherwise print "Meaningless!". Done.
 ```
-
-Note that variable references are enclosed in brackets ("[]").
 
 ## License
 
