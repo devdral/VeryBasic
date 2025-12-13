@@ -190,8 +190,8 @@ public class Tokenizer
                     case "list":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.List));
                         break;
-                    case "how":
-                        _tokens.Add(new SyntaxToken(SyntaxTokenType.How));
+                    case "do":
+                        _tokens.Add(new SyntaxToken(SyntaxTokenType.Do));
                         break;
                     case "given":
                         _tokens.Add(new SyntaxToken(SyntaxTokenType.Given));
@@ -295,14 +295,14 @@ public enum SyntaxTokenType
     Item,
     Of,
     NumberSign,
-    How,
     Given,
     Return,
     Convert,
     As,
     Number,
     Boolean,
-    String
+    String,
+    Do
 }
 
 public class NumberToken(double number) : IToken

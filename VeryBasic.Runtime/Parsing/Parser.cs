@@ -13,7 +13,7 @@ public class Parser
 
     private List<IToken> _tokens = [];
     private HashSet<string> _availableVars = new();
-    private HashSet<string> _availableProcs = new();
+    private Dictionary<string, List<string>> _availableProcs = new();
     private HashSet<string> _availableParams = new();
 
     public Parser(string code)
@@ -246,9 +246,8 @@ public class Parser
             return RepeatLoop();
         }
 
-        if (Match(How))
+        if (Match(To))
         {
-            Consume(To, "After 'how', you should put 'to'.");
             return ProcDef();
         }
 
@@ -353,6 +352,8 @@ public class Parser
         var name = ProcName();
         if (name is null)
             return null;
+        var keywords = _availableProcs[name];
+        var index = 0;
         var args = new List<IExpressionNode>();
         while (true)
         {
@@ -366,6 +367,28 @@ public class Parser
                 _index = restore;
                 break;
             }
+
+            if (index >= keywords.Count)
+                break;
+
+            var target = keywords[index];
+            var current = new StringBuilder();
+            while (target != current.ToString())
+            {
+                if (current.Length > 0)
+                    current.Append(' ');
+                if (Match(out var syntaxToken, typeof(SyntaxToken)))
+                {
+                    current.Append(((SyntaxToken)syntaxToken).Type.ToString().ToLower());
+                } else if (Match(out var identToken, typeof(IdentToken)))
+                {
+                    current.Append(((IdentToken)identToken).Name);
+                }
+                else
+                    throw new ParseException($"You were supposed to put '{target}', but you put '{current}'.");
+            }
+
+            index++;
         }
 
         return new ProcCallNode(name, args);
@@ -377,15 +400,36 @@ public class Parser
             throw new ParseException("Put the name of what you wanted me to teach me in quotes after 'how to'.");
         var name = ((StringToken)nameTok).String.ToLower();
         var args = new List<string>();
+        var keywords = new List<string>();
         if (Match(Given))
         {
-            while (!Match(And))
+            var keyword = new StringBuilder();
+            var isFirst = true;
+            while (!Match(Do))
             {
-                if (!Match(out var stringToken, typeof(StringToken)))
-                    break;
-                var arg = ((StringToken)stringToken).String;
-                args.Add(arg);
-                _availableParams.Add(arg);
+                if (Match(out var stringToken, typeof(StringToken)))
+                {
+                    if (!isFirst)
+                    {
+                        keywords.Add(keyword.ToString());
+                        keyword.Clear();   
+                    }
+                    var arg = ((StringToken)stringToken).String;
+                    args.Add(arg);
+                    _availableParams.Add(arg);
+                }
+                else if (Match(out var syntaxToken, typeof(SyntaxToken)))
+                {
+                    var tok = (SyntaxToken)syntaxToken;
+                    keyword.Append(tok.ToString().ToLower());
+                }
+                else if (Match(out var identToken, typeof(IdentToken)))
+                {
+                    var tok = (IdentToken)identToken;
+                    keyword.Append(tok.Name.ToLower());
+                }
+
+                isFirst = false;
             }
 
             var restore = _index;
@@ -405,7 +449,7 @@ public class Parser
             stmts.Add(Statement());
         }
 
-        _availableProcs.Add(name);
+        _availableProcs.Add(name, keywords);
         _availableParams.Clear();
         return new ProcDefNode(name, args, stmts);
     }
@@ -432,7 +476,7 @@ public class Parser
             else
                 break;
             var nameStr = name.ToString();
-            if (_availableProcs.Contains(nameStr))
+            if (_availableProcs.ContainsKey(nameStr))
                 return nameStr;
         }
 
@@ -627,9 +671,11 @@ public class Parser
         return new VarRefNode(VarName());
     }
 
-    public void RegisterPreexistingProcedure(string name)
+    public void RegisterPreexistingProcedure(string name, int arity)
     {
-        _availableProcs.Add(name);
+        if (_availableProcs.ContainsKey(name))
+            return;
+        _availableProcs.Add(name, Enumerable.Repeat(string.Empty, arity).ToList());
     }
 }
 
