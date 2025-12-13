@@ -5,9 +5,9 @@ of programming languages; the syntax only requires knowledge of English to under
 
 ## Build instructions
 
-1. Install the .NET SDK 9.0 if you don't already have it.
+1. Install the .NET SDK 10.0 if you don't already have it.
     1.  Go to the [downloads page](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
-        for Microsoft .NET SDK 9.0.
+        for Microsoft .NET SDK 10.0.
     2.  Download and install the version compatible with your system.
 2. Compile and run the application
     1. Inside the VeryBasic.Repl directory, run `dotnet run`. This will compile and run the 
