@@ -55,6 +55,10 @@ public class Repl
         if (_compiler is null)
         {
             _parser = new Parser(program);
+            foreach (var proc in _env.Externs)
+            {
+                _parser.RegisterPreexistingProcedure(proc.Key, proc.Value.Signature.Args.Count);
+            }
             _compiler = new Compiler();
             _compiler.RegisterExterns(_env);
             var code = _compiler.Compile(_parser);
