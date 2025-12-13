@@ -143,5 +143,6 @@ public enum VBType
     Boolean,
     // NOTE: For now, lists can have variance.
     List,
-    Void
+    Void,
+    Unknown
 }

@@ -34,6 +34,10 @@ public class Program
     {
         if (_source is null)
             throw new FatalException("No source provided.");
+        foreach (var proc in _environment.Externs)
+        {
+            _parser.RegisterPreexistingProcedure(proc.Key, proc.Value.Signature.Args.Count);
+        }
         _program = _compiler.Compile(_parser);
         _virtualMachine = new VirtualMachine(_program, _environment);
     }

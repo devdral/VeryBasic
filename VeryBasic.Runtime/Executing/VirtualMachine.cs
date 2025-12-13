@@ -192,6 +192,22 @@ public class VirtualMachine
             }
                 break;
 
+            case OpCode.And:
+            {
+                var arg1 = _stack.Pop();
+                var arg2 = _stack.Pop();
+                _stack.Push(new Value(arg1.Get<bool>() && arg2.Get<bool>()));
+            }
+                break;
+            
+            case OpCode.Or:
+            {
+                var arg1 = _stack.Pop();
+                var arg2 = _stack.Pop();
+                _stack.Push(new Value(arg1.Get<bool>() || arg2.Get<bool>()));
+            }
+                break;
+
             case OpCode.CallExtern:
             {
                 var name = LoadValue().Get<string>();

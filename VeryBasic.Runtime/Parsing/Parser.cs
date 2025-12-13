@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection.Metadata;
+using System.Text;
 using VeryBasic.Runtime.Executing.Errors;
 using static VeryBasic.Runtime.Parsing.SyntaxTokenType;
 
@@ -21,6 +21,9 @@ public class Parser
 
     private List<IToken> _tokens = [];
     private string _code;
+    private HashSet<string> _availableVars = new();
+    private Dictionary<string, List<string>> _availableProcs = new();
+    private HashSet<string> _availableParams = new();
 
     public Parser(string code)
     {
@@ -174,54 +177,72 @@ public class Parser
         List<INode> statements = new List<INode>();
         while (!IsAtEnd())
         {
-            statements.Add(Statement());
-            Consume(Period, "You forgot a period. Mind your punctuation!");
+            var stmt = Statement();
+            if (stmt is not null)
+                statements.Add(stmt);
+            else
+                break;
         }
 
         return statements;
     }
 
-    private VBType Type()
+    private string VarName()
     {
-        if (Match(out var typeName, typeof(IdentToken)))
+        var name = new StringBuilder();
+        var restore = _index;
+        while (!IsAtEnd())
         {
-            string typeNameS = ((IdentToken)typeName).Name;
-            return typeNameS switch
+            var tok = Advance();
+            if (tok is IdentToken ident)
             {
-                "number" => VBType.Number,
-                "string" => VBType.String,
-                "boolean" => VBType.Boolean,
-                _ => throw new ParseException($"I don't know what a {typeNameS} is.")
-            };
-        }
-        else if (Match(List))
-        {
-            return VBType.List;
+                if (name.Length > 0)
+                    name.Append(' ');
+                name.Append(ident.Name);
+            }
+            else if (tok is SyntaxToken syntaxToken)
+            {
+                if (name.Length > 0)
+                    name.Append(' ');
+                name.Append(syntaxToken.Type.ToString().ToLower());
+            }
+            else
+                break;
+            
+            var nameStr = name.ToString();
+            if (_availableVars.Contains(nameStr) || _availableParams.Contains(nameStr))
+                return nameStr;
         }
 
-        throw new ParseException("You forgot to put the name of the kind of thing you wanted.");
+        if (_availableVars.Contains(name.ToString()))
+            return name.ToString();
+        _index = restore;
+        throw new ParseException($"I have no record of '{name}'.");
     }
 
-    private INode Statement()
+    private VBType Type()
     {
-        if (Match(Declare))
+        if (Match(Number))
+        {
+            return VBType.Number;
+        } 
+        else if (Match(SyntaxTokenType.Boolean))
+        {
+            return VBType.Boolean;
+        }
+        else if (Match(SyntaxTokenType.String))
+        {
+            return VBType.String;
+        }
+
+        throw new ParseException("Here was supposed to be the type of thing you wanted: number, string, or boolean.");
+    }
+
+    private INode? Statement()
+    {
+        if (Match(Save))
         {
             return VarDec();
-        }
-
-        if (Match(Update))
-        {
-            if (Match(Item))
-            {
-                return ListSetStmt();
-            }
-
-            return VarSet();
-        }
-
-        if (Check(typeof(IdentToken)))
-        {
-            return ProcCall();
         }
 
         if (Match(If))
@@ -239,14 +260,8 @@ public class Parser
             return RepeatLoop();
         }
 
-        if (Match(Get))
+        if (Match(To))
         {
-            return ListGetStmt();
-        }
-
-        if (Match(How))
-        {
-            Consume(To, "You missed the word 'to'.");
             return ProcDef();
         }
 
@@ -257,375 +272,371 @@ public class Parser
 
         if (Match(Return))
         {
-            var expr = Expression();
-            return new ReturnNode(expr);
+            return ReturnStmt();
         }
 
-        throw new ParseException("I don't understand what you want me to do.");
+        if (Match(Update))
+        {
+            return UpdateStmt();
+        }
+
+        return ProcCall();
     }
 
-    private INode ConvertStmt()
+    private VarSetNode UpdateStmt()
+    {
+        var name = VarName();
+        Consume(To, "You missed a word: 'to'.");
+        var expr = Expression();
+        return new VarSetNode(name, expr);
+    }
+
+    private VarDecNode VarDec()
     {
         var expr = Expression();
-        Consume(To, "You missed the word 'to'.");
-        Consume(A, "You missed the word 'a'.");
-        var type = Type();
-        return new ConvertNode(expr, type);
-    }
+        Consume(As, "You missed a word: 'as'.");
 
-    private INode ProcDef()
-    {
-        if (!Match(out var procName, typeof(StringToken)))
-            throw new Exception("You forgot to put the name of what it was you're explaining how to do.");
+        if (!Match(out var nameTok, typeof(StringToken)))
+            throw new ParseException("You were supposed to put the name of the record in quotes.");
         
-        List<VBType> expectedArgs = new List<VBType>();
-        List<string> args = new List<string>();
-        if (Match(Given))
-        {
-            while (Match(out var argName, typeof(IdentToken)))
-            {
-                args.Add(((IdentToken)argName).Name);
-                Consume(Comma, "You forgot a comma before your type choice.");
-                Consume(A, "You forgot a word: 'a'.");
-                expectedArgs.Add(Type());
-                 if (!Match(Comma)) break;
-                if (Match(And)) break;
-            }
-            
-            if (!Match(Period) && Match(out var finalArgName, typeof(IdentToken)))
-            {
-                args.Add(((IdentToken)finalArgName).Name);
-                Consume(Comma, "You forgot a comma before your type choice.");
-                Consume(A, "You forgot a word: 'a'.");
-                expectedArgs.Add(Type());
-            }
-        }
-        
-        VBType returnType = VBType.Void;
-        if (Match(Return)) returnType = Type();
-        List<INode> statements = new List<INode>();
-        while (!(IsAtEnd() || Match(End)))
-        {
-            statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!.");
-        }
-        return new ProcDefNode(((StringToken)procName).String, expectedArgs, args, statements, returnType);
+        var name = ((StringToken)nameTok).String;
+        _availableVars.Add(name);
+        return new VarDecNode(name, expr);
     }
 
-    private string VarIdent()
+    private IfNode IfStmt()
     {
-        string varName = "";
-        int index = 0;
-        while (Match(out IToken? tok, typeof(IdentToken)))
+        var cond = Expression();
+        Consume(Then, "You missed a word: then.");
+        var stmts = new List<INode>();
+        while (!Check(End))
         {
-            if (index > 0) varName += " ";
-            varName += ((IdentToken)tok).Name;
-            ++index;
+            stmts.Add(Statement());
         }
-        return varName;
-    }
 
-    private INode ListSetStmt()
-    {
-        Consume(NumberSign, "You forgot a '#' (number sign).");
-        var index = Expression();
-        Consume(Of, "You missed a word: 'of'.");
-        var list = Expression();
-        Consume(To, "You missed a word: 'to'.");
-        var value = Expression();
-        return new ListSetNode(index, list, value);
-    }
-
-    private INode VarDec()
-    {
-        Consume(Variable, "You missed a word: 'variable'.");
-        string varName = VarIdent();
-        Consume(Comma, "You forgot a comma before your type choice.");
-        Consume(A, "You forgot an 'a' before your type selection.");
-        VBType type = Type();
-        IExpressionNode? value = null;
-        if (Match(Comma))
+        if (Match(Otherwise))
         {
-            Consume(From, "You forgot a word: 'from'.");
-            value = Expression();
-        }
-        return new VarDecNode(type, varName, value);
-    }
-
-    private INode VarSet()
-    {
-        string varName = VarIdent();
-        Consume(To, "You missed a word: 'to'.");
-        var value = Expression();
-        return new VarSetNode(varName, value);
-    }
-
-    private INode ProcCall()
-    {
-        // TODO: Remove unnecessary allocations; use StringBuilder
-        string procName = "";
-        int index1 = 0;
-        while (!(IsAtEnd() || Check(LBracket)))
-        {
-            string word;
-            if (Match(out var procNameToken, typeof(IdentToken)))
+            List<INode> otherwise;
+            if (Match(If))
             {
-                word = ((IdentToken)procNameToken).Name;
-            } 
-            else if (Check(Period))
-            {
-                return new ProcCallNode(procName.Trim(), []);
-            }
-            else
-                break;
-            if (index1 > 0) procName += " ";
-            procName += word;
-            ++index1;
-        }
-        List<IExpressionNode> args = [];
-        int index2 = 0;
-        bool shouldBeOnLast = false;
-        while (true)
-        {
-            if (!IsAtEnd() &&
-                (Check(Plus, Minus, The, LBracket, A) || // Unary operators / keywords
-                 Check(typeof(NumberToken), typeof(StringToken)) // Literals/varrefs
-                 )
-               )
-            {
-                args.Add(Expression());
-                if (Check(Period)) break;
-                Consume(Comma, $"You missed a comma between things you told me when using '{procName}'.");
-                if (shouldBeOnLast) throw new Exception($"You used the word 'and' before the last thing you gave me when using '{procName}'.");
-                if (Match(And)) shouldBeOnLast = true;
+                otherwise = [IfStmt()];
             }
             else
             {
-                break;
-            }
-            ++index2;
-        }
-
-        return new ProcCallNode(procName, args);
-    }
-
-    private INode IfStmt()
-    {
-        IExpressionNode cond = Expression();
-        Consume(Then, "You missed a word: 'then'.");
-        List<INode> statements = new List<INode>();
-        bool hasElse = false;
-        while (!Match(End))
-        {
-            statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!");
-            if (Match(Otherwise))
-            {
-                hasElse = true;
-                break;
-            }
-        }
-
-        if (hasElse)
-        {
-            if (Match(Comma))
-            {
-                Consume(If, "You missed a word: 'if'.");
-                return new IfNode(cond, statements, [IfStmt()]);
-            }
-            else
-            {
-                List<INode> elseStatements = new List<INode>();
+                otherwise = [];
                 while (!Match(End))
                 {
-                    elseStatements.Add(Statement());
-                    Consume(Period, "You missed a period. Mind your punctuation!");
+                    otherwise.Add(Statement());
                 }
-                return new IfNode(cond, statements, elseStatements);
+            }
+
+            return new IfNode(cond, stmts, otherwise);
+        }
+
+        return new IfNode(cond, stmts);
+    }
+
+    private WhileLoopNode WhileLoop()
+    {
+        var cond = Expression();
+        var stmts = new List<INode>();
+        while (!Match(End))
+        {
+            stmts.Add(Statement());
+        }
+
+        return new WhileLoopNode(cond, stmts);
+    }
+
+    private RepeatLoopNode RepeatLoop()
+    {
+        var times = Expression();
+        Consume(Times, "You missed a word: 'times'.");
+        var stmts = new List<INode>();
+        while (!Match(End))
+        {
+            stmts.Add(Statement());
+        }
+
+        return new RepeatLoopNode(times, stmts);
+    }
+
+    private ProcCallNode? ProcCall()
+    {
+        var name = ProcName();
+        if (name is null)
+            return null;
+        var keywords = _availableProcs[name];
+        var index = 0;
+        var args = new List<IExpressionNode>();
+        while (true)
+        {
+            var restore = _index;
+            try
+            {
+                args.Add(Expression());
+            }
+            catch (ParseException)
+            {
+                _index = restore;
+                break;
+            }
+
+            if (index >= keywords.Count)
+                break;
+
+            var target = keywords[index];
+            var current = new StringBuilder();
+            while (target != current.ToString())
+            {
+                if (current.Length > 0)
+                    current.Append(' ');
+                if (Match(out var syntaxToken, typeof(SyntaxToken)))
+                {
+                    current.Append(((SyntaxToken)syntaxToken).Type.ToString().ToLower());
+                } else if (Match(out var identToken, typeof(IdentToken)))
+                {
+                    current.Append(((IdentToken)identToken).Name);
+                }
+                else
+                    throw new ParseException($"You were supposed to put '{target}', but you put '{current}'.");
+            }
+
+            index++;
+        }
+
+        return new ProcCallNode(name, args);
+    }
+
+    private ProcDefNode ProcDef()
+    {
+        if (!Match(out var nameTok, typeof(StringToken)))
+            throw new ParseException("Put the name of what you wanted me to teach me in quotes after 'how to'.");
+        var name = ((StringToken)nameTok).String.ToLower();
+        var args = new List<string>();
+        var keywords = new List<string>();
+        if (Match(Given))
+        {
+            var keyword = new StringBuilder();
+            var isFirst = true;
+            while (!Match(Do))
+            {
+                if (Match(out var stringToken, typeof(StringToken)))
+                {
+                    if (!isFirst)
+                    {
+                        keywords.Add(keyword.ToString());
+                        keyword.Clear();   
+                    }
+                    var arg = ((StringToken)stringToken).String;
+                    args.Add(arg);
+                    _availableParams.Add(arg);
+                }
+                else if (Match(out var syntaxToken, typeof(SyntaxToken)))
+                {
+                    var tok = (SyntaxToken)syntaxToken;
+                    keyword.Append(tok.ToString().ToLower());
+                }
+                else if (Match(out var identToken, typeof(IdentToken)))
+                {
+                    var tok = (IdentToken)identToken;
+                    keyword.Append(tok.Name.ToLower());
+                }
+
+                isFirst = false;
+            }
+
+            var restore = _index;
+            if (!Match(out var stringToken2, typeof(StringToken)))
+                _index = restore;
+            else
+            {
+                var arg = ((StringToken)stringToken2).String;
+                args.Add(arg);
+                _availableParams.Add(arg);
             }
         }
-        return new IfNode(cond, statements);
-    }
 
-    private INode WhileLoop()
-    {
-        IExpressionNode cond = Expression();
-        List<INode> statements = new List<INode>();
+        var stmts = new List<INode>();
         while (!Match(End))
         {
-            statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!");
+            stmts.Add(Statement());
         }
 
-        return new WhileLoopNode(cond, statements);
+        _availableProcs.Add(name, keywords);
+        _availableParams.Clear();
+        return new ProcDefNode(name, args, stmts);
     }
 
-    private INode RepeatLoop()
+    private string? ProcName()
     {
-        IExpressionNode times = Expression();
-        Consume(Times, "You missed a word: 'times'.");
-        List<INode> statements = new List<INode>();
-        while (!Match(End))
+        var name = new StringBuilder();
+        var restore = _index;
+        while (!IsAtEnd())
         {
-            statements.Add(Statement());
-            Consume(Period, "You missed a period. Mind your punctuation!");
+            var tok = Advance();
+            if (tok is IdentToken ident)
+            {
+                if (name.Length > 0)
+                    name.Append(' ');
+                name.Append(ident.Name);
+            }
+            else if (tok is SyntaxToken syntaxToken)
+            {
+                if (name.Length > 0)
+                    name.Append(' ');
+                name.Append(syntaxToken.Type.ToString().ToLower());
+            }
+            else
+                break;
+            var nameStr = name.ToString();
+            if (_availableProcs.ContainsKey(nameStr))
+                return nameStr;
         }
-        return new RepeatLoopNode(times, statements);
+
+        _index = restore;
+        if (name.ToString() is "")
+            return null;
+        throw new ParseException($"I don't know how to '{name}'.");
     }
 
-    private INode ListGetStmt()
+    private ConvertNode ConvertStmt()
     {
-        Consume(Item, "You missed a word: 'item'.");
-        Consume(NumberSign, "You missed a '#' (number sign).");
-        var index = Expression();
-        Consume(Of,  "You missed a word: 'of'.");
-        var list = Expression();
-        return new ListGetNode(index, list);
+        var expr = Expression();
+        Consume(To, "After the thing you wanted to convert, put 'to'.");
+        Consume(A, "Before the type of thing you wanted to make, put 'a'.");
+        return new ConvertNode(expr, Type());
+    }
+
+    private ReturnNode ReturnStmt()
+    {
+        return new ReturnNode(Expression());
     }
 
     private IExpressionNode Expression()
     {
-        return Logical();
+        return Boolean();
     }
 
-    private IExpressionNode Logical()
+    private IExpressionNode Boolean()
     {
-        IExpressionNode expr = Equality();
-        while (Match(And, Or))
-        {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Equality();
-            BinOp op = BinOp.And;
-            switch (opToken.Type)
-            {
-                case And:
-                    op = BinOp.And;
-                    break;
-                case Or:
-                    op = BinOp.Or;
-                    break;
-            }
-            expr = new BinaryOpNode(expr, op, right);
-        }
-        return expr;
-    }
+        var expr = Comparison();
 
-    private IExpressionNode Equality()
-    {
-        IExpressionNode expr = Comparison();
-        while (Match(Equal, NotEqual))
+        while (true)
         {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Comparison();
-            BinOp op = BinOp.Equal;
-            switch (opToken.Type)
+            if (Match(And))
             {
-                case Equal:
-                    op = BinOp.Equal;
-                    break;
-                case NotEqual:
-                    op = BinOp.NotEqual;
-                    break;
+                var right = Comparison();
+                expr = new BinaryOpNode(expr, BinOp.And, right);
             }
-            expr = new BinaryOpNode(expr, op, right);
+            else if (Match(Or))
+            {
+                var right = Comparison();
+                expr = new BinaryOpNode(expr, BinOp.Or, right);
+            }
+            else
+            {
+                break;
+            }
         }
+
         return expr;
     }
 
     private IExpressionNode Comparison()
     {
-        IExpressionNode expr = Term();
-        while (Match(LessThan, GreaterThan, GEq, LEq))
+        var expr = Term();
+        while (true)
         {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Term();
-            BinOp op = BinOp.LessThan;
-            switch (opToken.Type)
+            if (Match(LessThan))
             {
-                case LessThan:
-                    op = BinOp.LessThan;
-                    break;
-                case LEq:
-                    op = BinOp.LEq;
-                    break;
-                case GreaterThan:
-                    op = BinOp.GreaterThan;
-                    break;
-                case GEq:
-                    op = BinOp.GEq;
-                    break;
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.LessThan, right);
             }
-            expr = new BinaryOpNode(expr, op, right);
+            else if (Match(GreaterThan))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.GreaterThan, right);
+            }
+            else if (Match(LEq))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.LEq, right);
+            }
+            else if (Match(GEq))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.GEq, right);
+            }
+            else if (Match(Equal))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.Equal, right);
+            }
+            else if (Match(NotEqual))
+            {
+                var right = Term();
+                expr = new BinaryOpNode(expr, BinOp.NotEqual, right);
+            }
+            else
+                break;
         }
+
         return expr;
     }
-
     private IExpressionNode Term()
     {
-        IExpressionNode expr = Factor();
-        while (Match(Plus, Minus))
+        var expr = Product();
+        while (true)
         {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Factor();
-            BinOp op = BinOp.Add;
-            switch (opToken.Type)
+            if (Match(Plus))
             {
-                case Plus:
-                    op = BinOp.Add;
-                    break;
-                case Minus:
-                    op = BinOp.Sub;
-                    break;
+                var right = Product();
+                expr = new BinaryOpNode(expr, BinOp.Add, right);
+            } else if (Match(Minus))
+            {
+                var right = Product();
+                expr = new BinaryOpNode(expr, BinOp.Sub, right);
             }
-            expr = new BinaryOpNode(expr, op, right);
+            else
+                break;
         }
+
         return expr;
     }
 
-    private IExpressionNode Factor()
+    private IExpressionNode Product()
     {
-        IExpressionNode expr = Unary();
-        while (Match(Multiply, Divide))
+        var expr = Unary();
+
+        while (true)
         {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode right = Unary();
-            BinOp op = BinOp.Mul;
-            switch (opToken.Type)
+            if (Match(Multiply))
             {
-                case Multiply:
-                    op = BinOp.Mul;
-                    break;
-                case Divide:
-                    op = BinOp.Div;
-                    break;
+                var right = Unary();
+                expr = new BinaryOpNode(expr, BinOp.Mul, right);
+            } else if (Match(Divide))
+            {
+                var right = Unary();
+                expr = new BinaryOpNode(expr, BinOp.Div, right);
             }
-            expr = new BinaryOpNode(expr, op, right);
+            else
+                break;
         }
+
         return expr;
     }
 
     private IExpressionNode Unary()
     {
-        IExpressionNode expr;
-        if (Match(Minus, Not))
+        var expr = Primary();
+        if (Match(Not))
         {
-            SyntaxToken opToken = (SyntaxToken) Previous();
-            IExpressionNode operand = Unary();
-            UnaryOp op = UnaryOp.Negate;
-            switch (opToken.Type)
-            {
-                case Minus:
-                    op = UnaryOp.Negate;
-                    break;
-                case Not:
-                    op = UnaryOp.Invert;
-                    break;
-            }
-            expr = new UnaryOpNode(op, operand);
+            expr = new UnaryOpNode(UnaryOp.Invert, expr);
         }
-        else
+        else if (Match(Minus))
         {
-            expr = Primary();
+            expr = new UnaryOpNode(UnaryOp.Invert, expr);
         }
 
         return expr;
@@ -633,99 +644,61 @@ public class Parser
 
     private IExpressionNode Primary()
     {
-        if (Check(Yes, No))
-        {
-            bool value = ((SyntaxToken)Advance()).Type switch
-            {
-                Yes => true,
-                No => false,
-                _ => throw new ParseException("Boolean must be either yes or no")
-            };
-            return new ValueNode(
-                new Value(
-                    value
-                    )
-                );
-        }
-
-        if (Match(out IToken? tok1, typeof(StringToken)))
-        {
-            return new ValueNode(
-                new Value(
-                    ((StringToken)tok1).String
-                )
-            );
-        }
-        
-        if (Match(out IToken? tok2, typeof(NumberToken)))
-        {
-            return new ValueNode(
-                new Value(
-                    ((NumberToken)tok2).Number
-                )
-            );
-        }
-
-        if (Match(LBracket))
-        {
-            string varName = "";
-            int index = 0;
-            while (!Check(RBracket))
-            {
-                if (index > 0) varName += " ";
-                Match(out IToken? tok3, typeof(IdentToken));
-                varName += ((IdentToken)tok3).Name;
-                ++index;
-            }
-
-            Advance();
-            return new VarRefNode(varName);
-        }
-
-        if (Match(The))
-        {
-            Consume(Result, "You forgot the word 'result'.");
-            return new TheResultNode();
-        }
-        
         if (Match(LParen))
         {
-            IExpressionNode expression = Logical();
-            if (!Match(RParen)) throw new Exception("You opened a parenthesis in a math expression, but you forgot to close it.");
-            return expression;
-        }
-
-        if (Match(A))
-        {
-            Consume(List, "If you wanted to make a list, you forgot the word 'list'.");
-            Consume(Of, "You forgot the word 'of'.");
-            return ListLiteral();
+            var expr = Expression();
+            Consume(RParen, "Make sure to include the right parenthesis.");
+            return expr;
         }
         
-        throw new Exception("I don't understand what you wanted to put here.");
+        if (Match(Yes))
+        {
+            return new ValueNode(new Value(true));
+        }
+        
+        if (Match(No))
+        {
+            return new ValueNode(new Value(false));
+        }
+
+        if (Match(out var num, typeof(NumberToken)))
+        {
+            return new ValueNode(new Value(((NumberToken)num).Number));
+        }
+
+        if (Match(out var str, typeof(StringToken)))
+        {
+            return new ValueNode(new Value(((StringToken)str).String));
+        }
+
+        var restore = _index;
+        if (Match(The))
+        {
+            if (!Match(Result))
+                _index = restore;
+            else
+            {
+                return new TheResultNode();
+            }
+        }
+        
+        return new VarRefNode(VarName());
     }
 
-    private IExpressionNode ListLiteral()
+    public void RegisterPreexistingProcedure(string name, int arity)
     {
-        List<IExpressionNode> items = [];
-        while (!Match(And))
-        {
-            items.Add(Expression());
-            Consume(Comma, "You missed a comma between list items.");
-        }
-        items.Add(Expression());
-        return new ListNode(items);
+        if (_availableProcs.ContainsKey(name))
+            return;
+        _availableProcs.Add(name, Enumerable.Repeat(string.Empty, arity).ToList());
     }
 }
 
-public class ProcDefNode(string name, List<VBType> expectedArgs, List<string> args, List<INode> body, VBType returnType)
+public class ProcDefNode(string name, List<string> args, List<INode> body)
     : INode
 {
     public string Name = name;
-    public List<VBType> ExpectedArgs = expectedArgs;
     public List<string> Args = args;
     public List<INode> Body = body;
-    public VBType ReturnType = returnType;
 
     public T Accept<T>(IVisitor<T> visitor)
     {
@@ -872,11 +845,10 @@ public class IfNode : INode
     }
 }
 
-public class VarDecNode(VBType type, string name, IExpressionNode? value) : INode
+public class VarDecNode(string name, IExpressionNode value) : INode
 {
     public string Name = name;
-    public VBType Type = type;
-    public IExpressionNode? Value = value;
+    public IExpressionNode Value = value;
     
     public T Accept<T>(IVisitor<T> visitor)
     {
